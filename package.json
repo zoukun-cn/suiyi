@@ -1,0 +1,24 @@
+{
+  "name": "chrome-translation-extension",
+  "version": "1.0.0",
+  "description": "Chrome translation extension with pluggable service architecture",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vite-plugin-web-extension": "^4.1.6"
+  },
+  "keywords": [
+    "chrome-extension",
+    "translation",
+    "manifest-v3",
+    "typescript"
+  ],
+  "license": "MIT"
+}

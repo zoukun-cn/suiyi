@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>翻译助手</title>
+  </head>
+  <body>
+    <div id="app">
+      <h1>翻译助手</h1>
+
+      <div class="section">
+        <label for="service-select">翻译服务</label>
+        <select id="service-select"></select>
+      </div>
+
+      <div class="section">
+        <label for="source-lang">源语言</label>
+        <select id="source-lang"></select>
+      </div>
+
+      <div class="section">
+        <label for="target-lang">目标语言</label>
+        <select id="target-lang"></select>
+      </div>
+
+      <div class="section">
+        <textarea id="input-text" rows="4" placeholder="输入要翻译的文本..."></textarea>
+        <button id="translate-btn">翻译</button>
+      </div>
+
+      <div class="section result-section" id="result-section" style="display: none">
+        <label>翻译结果</label>
+        <div id="result-text"></div>
+        <div id="result-service"></div>
+      </div>
+
+      <div class="section actions">
+        <button id="translate-page-btn" class="secondary">翻译当前页面</button>
+        <button id="restore-page-btn" class="secondary">恢复页面</button>
+      </div>
+    </div>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>
