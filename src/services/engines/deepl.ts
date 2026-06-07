@@ -1,12 +1,12 @@
-// DeepL 翻译引擎 (占位 — 需要 API Key)
-import type { TranslationEngine } from '../translator'
+// DeepL 翻译引擎 — 继承默认 batchTranslate（循环调用 translate）
+import { BaseTranslationEngine } from '../translator'
 import type { LanguageCode, EngineType } from '../../types'
 
 const SUPPORTED_LANGUAGES: LanguageCode[] = [
   'zh-CN', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'pt', 'ru', 'it', 'nl', 'pl',
 ]
 
-export class DeepLEngine implements TranslationEngine {
+export class DeepLEngine extends BaseTranslationEngine {
   readonly type: EngineType = 'deepl'
   readonly name = 'DeepL'
   private apiKey: string | null = null

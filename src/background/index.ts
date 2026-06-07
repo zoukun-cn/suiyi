@@ -183,6 +183,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return true
     }
 
+    case 'BATCH_TRANSLATE_TEXT': {
+      handleBatchTranslateRequest(message.payload)
+        .then((result) => sendResponse({ success: true, data: result }))
+        .catch((error) => sendResponse({ success: false, error: error.message }))
+      return true
+    }
+
     case 'TRANSLATE_PAGE': {
       handlePageTranslate(message.payload)
         .then((result) => sendResponse({ success: true, data: result }))
@@ -257,6 +264,25 @@ async function handleTranslateRequest(payload: TranslatePayload) {
   )
 
   return result
+}
+
+interface BatchTranslatePayload {
+  texts: string[]
+  from: string
+  to: string
+  engine?: string
+}
+
+async function handleBatchTranslateRequest(payload: BatchTranslatePayload) {
+  const { texts, from, to, engine } = payload
+
+  console.log(`[Suiyi BG] Batch translating ${texts.length} texts: ${from}→${to} via ${engine || 'default'}`)
+
+  const eng = translator.get((engine as EngineType) || undefined)
+  if (!eng) throw new Error(`Engine "${engine}" not registered`)
+
+  const map = await eng.batchTranslate(texts, from as LanguageCode, to as LanguageCode)
+  return Object.fromEntries(map)
 }
 
 async function handlePageTranslate(payload: TranslatePayload) {

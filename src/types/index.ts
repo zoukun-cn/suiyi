@@ -65,6 +65,7 @@ export interface HistoryItem {
 /** 消息类型枚举 */
 export type MessageType =
   | 'TRANSLATE_TEXT'
+  | 'BATCH_TRANSLATE_TEXT'
   | 'TRANSLATE_PAGE'
   | 'EXECUTE_PAGE_TRANSLATE'
   | 'RESTORE_PAGE'

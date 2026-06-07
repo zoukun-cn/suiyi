@@ -10,8 +10,41 @@ export interface TranslationEngine {
   readonly name: string
   /** 翻译文本 */
   translate(text: string, from: LanguageCode, to: LanguageCode): Promise<string>
+  /** 批量翻译 */
+  batchTranslate(texts: string[], from: LanguageCode, to: LanguageCode): Promise<Map<string, string>>
   /** 检查是否支持某语言 */
   supports(from: LanguageCode, to: LanguageCode): boolean
+}
+
+// ==================== 引擎基类 ====================
+
+/**
+ * 翻译引擎抽象基类
+ * 默认 batchTranslate 实现为循环调用 translate
+ * LLM 类引擎可覆写为合并单次请求
+ */
+export abstract class BaseTranslationEngine implements TranslationEngine {
+  abstract readonly type: EngineType
+  abstract readonly name: string
+  abstract translate(text: string, from: LanguageCode, to: LanguageCode): Promise<string>
+  abstract supports(from: LanguageCode, to: LanguageCode): boolean
+
+  /** 默认批量：逐条翻译，子类可按需覆写 */
+  async batchTranslate(
+    texts: string[],
+    from: LanguageCode,
+    to: LanguageCode
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>()
+    for (const text of texts) {
+      try {
+        result.set(text, await this.translate(text, from, to))
+      } catch {
+        // 单条失败跳过
+      }
+    }
+    return result
+  }
 }
 
 // ==================== 翻译服务 ====================

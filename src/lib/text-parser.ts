@@ -22,7 +22,7 @@ export function extractTranslatableSegments(root: Node): TextSegment[] {
       if (!parent) return NodeFilter.FILTER_REJECT
 
       const tag = parent.tagName.toLowerCase()
-      if (['script', 'style', 'code', 'pre', 'noscript', 'textarea'].includes(tag)) {
+      if (['script', 'style', 'code', 'pre', 'noscript', 'textarea', 'pre'].includes(tag)) {
         return NodeFilter.FILTER_REJECT
       }
 

@@ -104,28 +104,42 @@ async function translatePage(payload: {
 
     showToast(`正在翻译... 0/${texts.length}`)
 
-    // 分批翻译
-    const batchSize = 10
-    for (let i = 0; i < texts.length; i += batchSize) {
-      const batch = texts.slice(i, i + batchSize)
+    // 合并批量翻译 — 200 条一批
+    const BATCH_SIZE = 200
+    let translatedSoFar = 0
 
-      for (const text of batch) {
-        if (translatedCache.has(text)) continue
+    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+      const batch = texts.slice(i, i + BATCH_SIZE)
+      const untranslated = batch.filter((t) => !translatedCache.has(t))
 
+      if (untranslated.length > 0) {
         try {
-          const response = await sendMessage('TRANSLATE_TEXT', { text, from, to, engine })
+          const response = await sendMessage('BATCH_TRANSLATE_TEXT', {texts: untranslated, from, to, engine})
           if (response?.success && response.data) {
-            translatedCache.set(text, (response.data as { translated: string }).translated)
+            // data = { "原文": "译文", ... }
+            const results = response.data as Record<string, string>
+            for (const [original, translated] of Object.entries(results)) {
+              if (translated) translatedCache.set(original, translated)
+            }
           }
-        } catch {
-          // 单条失败继续
-          console.warn(`[Suiyi CS] Failed to translate segment: "${text.slice(0, 50)}..."`)
+        } catch (err) {
+          console.warn('[Suiyi CS] Batch translate failed, trying individual fallback...', err)
+          // 回退到逐条翻译
+          for (const text of untranslated) {
+            try {
+              const r = await sendMessage('TRANSLATE_TEXT', { text, from, to, engine })
+              if (r?.success && r.data) {
+                translatedCache.set(text, (r.data as { translated: string }).translated)
+              }
+            } catch {
+              // 单条失败继续
+            }
+          }
         }
       }
 
-      // 更新进度
-      const done = Math.min(i + batchSize, texts.length)
-      showToast(`正在翻译... ${done}/${texts.length}`, 0)
+      translatedSoFar = Math.min(i + BATCH_SIZE, texts.length)
+      showToast(`正在翻译... ${translatedSoFar}/${texts.length}`, 0)
     }
 
     // 注入译文

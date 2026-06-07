@@ -1,10 +1,10 @@
 // Google 翻译引擎 — 使用免费 Google Translate API
-import type { TranslationEngine } from '../translator'
+import { BaseTranslationEngine } from '../translator'
 import type { LanguageCode, EngineType } from '../../types'
 
 const GOOGLE_TRANSLATE_API = 'https://translate.googleapis.com/translate_a/single'
 
-export class GoogleTranslateEngine implements TranslationEngine {
+export class GoogleTranslateEngine extends BaseTranslationEngine {
   readonly type: EngineType = 'google'
   readonly name = 'Google 翻译'
 
