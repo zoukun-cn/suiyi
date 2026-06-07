@@ -1,5 +1,6 @@
 // 页面翻译注入内容脚本 — 双语对照翻译
 import type { PlasmoCSConfig } from 'plasmo'
+import { sendMessage } from '../lib/messaging'
 import { extractTranslatableSegments, isTranslatable } from '../lib/text-parser'
 import { debounce } from '../lib/dom-utils'
 
@@ -68,9 +69,8 @@ async function translatePage(payload: {
         if (translatedCache.has(text)) continue
 
         try {
-          const response = await chrome.runtime.sendMessage({
-            type: 'TRANSLATE_TEXT',
-            payload: { text, from, to, engine },
+          const response = await sendMessage('TRANSLATE_TEXT', {
+            text, from, to, engine,
           })
 
           if (response?.success && response.data) {

@@ -1,5 +1,6 @@
 // 悬停翻译工具条渲染 — 鼠标悬停在文本上自动翻译
 import type { PlasmoCSConfig } from 'plasmo'
+import { sendMessage } from '../lib/messaging'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -150,17 +151,14 @@ async function translateAndShow(text: string, x: number, y: number): Promise<voi
   setHoverTooltipLoading()
 
   try {
-    const response = await chrome.runtime.sendMessage({
-      type: 'TRANSLATE_TEXT',
-      payload: {
-        text,
-        from: 'auto',
-        to: 'zh-CN',
-      },
+    const response = await sendMessage('TRANSLATE_TEXT', {
+      text,
+      from: 'auto',
+      to: 'zh-CN',
     })
 
     if (response?.success && response.data) {
-      setHoverTooltipContent(text, response.data.translated)
+      setHoverTooltipContent(text, (response.data as { translated: string }).translated)
     } else {
       hideHoverTooltip()
     }

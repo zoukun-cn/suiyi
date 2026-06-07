@@ -1,5 +1,6 @@
 // 划词翻译内容脚本 — 选中文本后弹出翻译工具条
 import type { PlasmoCSConfig } from 'plasmo'
+import { sendMessage } from '../lib/messaging'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -74,17 +75,14 @@ document.addEventListener('mouseup', () => {
 
   debounceTimer = setTimeout(async () => {
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'TRANSLATE_TEXT',
-        payload: {
-          text,
-          from: 'auto',
-          to: 'zh-CN',
-        },
+      const response = await sendMessage('TRANSLATE_TEXT', {
+        text,
+        from: 'auto',
+        to: 'zh-CN',
       })
 
       if (response?.success && response.data) {
-        const translated = response.data.translated
+        const translated = (response.data as { translated: string }).translated
         showTooltip(
           rect.left + window.scrollX,
           rect.bottom + window.scrollY,

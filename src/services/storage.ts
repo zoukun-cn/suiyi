@@ -68,13 +68,13 @@ export async function clearHistory(): Promise<void> {
 const API_KEY_PREFIX = 'suiyi_apikey_'
 
 export async function getApiKey(engine: EngineType): Promise<string | null> {
-  return await storage.get(`${API_KEY_PREFIX}${engine}`)
+  return await local.get(`${API_KEY_PREFIX}${engine}`)
 }
 
 export async function setApiKey(engine: EngineType, key: string): Promise<void> {
-  await storage.set(`${API_KEY_PREFIX}${engine}`, key)
+  await local.set(`${API_KEY_PREFIX}${engine}`, key)
 }
 
 export async function removeApiKey(engine: EngineType): Promise<void> {
-  await storage.remove(`${API_KEY_PREFIX}${engine}`)
+  await local.remove(`${API_KEY_PREFIX}${engine}`)
 }

@@ -3,6 +3,7 @@ import { translator } from '../services/translator'
 import { GoogleTranslateEngine } from '../services/engines/google'
 import { DeepLEngine } from '../services/engines/deepl'
 import { OpenAITranslateEngine } from '../services/engines/openai'
+import { DeepSeekEngine } from '../services/engines/deepseek'
 import type { LanguageCode, EngineType } from '../types'
 import { getApiKey, getSettings, saveSettings } from '../services/storage'
 
@@ -14,6 +15,7 @@ export {}
 translator.register(new GoogleTranslateEngine())
 translator.register(new DeepLEngine())
 translator.register(new OpenAITranslateEngine())
+translator.register(new DeepSeekEngine())
 
 // 异步初始化: 加载 API Keys 和用户设置
 async function initialize() {
@@ -33,10 +35,38 @@ async function initialize() {
     engine?.setApiKey(openaiKey)
   }
 
+  const deepseekKey = await getApiKey('deepseek')
+  if (deepseekKey) {
+    const engine = translator.get('deepseek') as DeepSeekEngine
+    engine?.setApiKey(deepseekKey)
+  }
+
   console.log('[Suiyi] Initialized with engines:', translator.list().join(', '))
 }
 
 initialize()
+
+// ==================== 监听 Storage 变更 ====================
+
+// 当用户在设置页面修改 API Key 时，自动同步到引擎实例
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'sync') return
+
+  const PREFIX = 'suiyi_apikey_'
+  for (const [key, change] of Object.entries(changes)) {
+    if (!key.startsWith(PREFIX)) continue
+
+    const engineType = key.slice(PREFIX.length) as EngineType
+    const engine = translator.get(engineType)
+    if (!engine || !('setApiKey' in engine)) continue
+
+    const newKey = change.newValue as string | undefined
+    if (newKey) {
+      ;(engine as { setApiKey: (k: string) => void }).setApiKey(newKey)
+      console.log(`[Suiyi] API key synced for ${engineType}`)
+    }
+  }
+})
 
 // ==================== 消息监听 ====================
 

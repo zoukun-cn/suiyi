@@ -10,7 +10,7 @@ export interface Language {
 }
 
 /** 翻译引擎类型 */
-export type EngineType = 'google' | 'deepl' | 'openai' | 'microsoft'
+export type EngineType = 'google' | 'deepl' | 'openai' | 'microsoft' | 'deepseek'
 
 /** 引擎选项 */
 export interface Engine {
@@ -111,4 +111,5 @@ export const ENGINES: Engine[] = [
   { type: 'microsoft', name: '微软翻译', enabled: true, needsApiKey: false },
   { type: 'deepl', name: 'DeepL', enabled: false, needsApiKey: true },
   { type: 'openai', name: 'OpenAI', enabled: false, needsApiKey: true },
+  { type: 'deepseek', name: 'DeepSeek', enabled: true, needsApiKey: true },
 ]
