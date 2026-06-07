@@ -1,5 +1,8 @@
 // 文本解析工具 — 将页面文本拆分为可翻译的片段
 
+/** 不需要翻译的 HTML 标签（CSS 选择器格式，用于 closest() 匹配） */
+export const SKIP_SELECTOR = 'script, style, code, pre, noscript, textarea, input, kbd'
+
 /** 文本段落 (用于双语对照渲染) */
 export interface TextSegment {
   id: string
@@ -17,12 +20,8 @@ export function extractTranslatableSegments(root: Node): TextSegment[] {
   const segments: TextSegment[] = []
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node: Text) {
-      // 跳过脚本和样式
-      const parent = node.parentElement
-      if (!parent) return NodeFilter.FILTER_REJECT
-
-      const tag = parent.tagName.toLowerCase()
-      if (['script', 'style', 'code', 'pre', 'noscript', 'textarea', 'pre'].includes(tag)) {
+      // 原生 closest() 沿祖先链检查，确保文本不在排除元素内
+      if (node.parentElement?.closest(SKIP_SELECTOR)) {
         return NodeFilter.FILTER_REJECT
       }
 

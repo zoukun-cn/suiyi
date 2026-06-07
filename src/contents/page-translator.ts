@@ -1,7 +1,7 @@
 // 页面翻译注入内容脚本 — 双语对照翻译
 import type { PlasmoCSConfig } from 'plasmo'
 import { sendMessage } from '../lib/messaging'
-import { extractTranslatableSegments } from '../lib/text-parser'
+import { extractTranslatableSegments, SKIP_SELECTOR } from '../lib/text-parser'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -163,15 +163,14 @@ function injectBilingual(
     const translation = translatedCache.get(seg.text)
     if (!translation) continue
 
-    const parent = seg.node.parentElement
-    if (!parent) continue
+    const el = seg.node.parentElement
+    if (!el) continue
 
-    // 跳过不可翻译元素的父节点
-    const tag = parent.tagName.toLowerCase()
-    if (['script', 'style', 'code', 'pre', 'noscript', 'textarea'].includes(tag)) continue
+    // 原生 closest() 沿祖先链跳过排除元素
+    if (el.closest(SKIP_SELECTOR)) continue
 
     // 跳过已经翻译的
-    if (parent.hasAttribute(TRANSLATED_ATTR)) continue
+    if (el.hasAttribute(TRANSLATED_ATTR)) continue
 
     // 检查文本节点还在 DOM 中
     if (!seg.node.parentNode) continue
@@ -180,30 +179,30 @@ function injectBilingual(
       // 用 <suiyi-original> 包裹原文
       const originalWrap = document.createElement('suiyi-original')
       originalWrap.textContent = seg.node.textContent
-      originalWrap.style.cssText = 'all: inherit; display: inline;'
+      originalWrap.style.cssText = 'all: unset; display: block;'
 
       // 创建译文
       const translatedEl = document.createElement('suiyi-translated')
       translatedEl.textContent = translation
       translatedEl.style.cssText = `
-        display: inline;
+        display: block;
         color: #4338ca;
-        background: rgba(99, 102, 241, 0.08);
-        border-bottom: 1px dashed rgba(99, 102, 241, 0.4);
-        margin-left: 2px;
+        margin: 2px 0;
         font-style: italic;
-        font-size: 0.95em;
-        border-radius: 2px;
-        padding: 0 1px;
+        font-size: 0.92em;
+        border-radius: 0 4px 4px 0;
       `
 
-      // 替换原文文本节点为 original wrap
-      seg.node.replaceWith(originalWrap)
-      // 在原文后插入译文
-      originalWrap.after(translatedEl)
+      // 块级包裹 — 兼容 inline / flex / grid 等任意父布局
+      const wrapper = document.createElement('suiyi-trans-block')
+      wrapper.style.cssText = 'display: block;'
+      wrapper.append(originalWrap, translatedEl)
+
+      // 替换原文文本节点为包裹容器
+      seg.node.replaceWith(wrapper)
 
       // 标记父元素
-      parent.setAttribute(TRANSLATED_ATTR, '')
+      el.setAttribute(TRANSLATED_ATTR, '')
       count++
     } catch {
       // DOM 操作失败，跳过
@@ -218,17 +217,13 @@ function injectBilingual(
 function restorePage(): number {
   let count = 0
 
-  // 移除译文
-  document.querySelectorAll('suiyi-translated').forEach((el) => {
-    el.remove()
-    count++
-  })
-
-  // 解包原文：把 <suiyi-original> 的文本内容还原为裸文本节点
-  document.querySelectorAll('suiyi-original').forEach((el) => {
-    const text = el.textContent || ''
+  // 还原：移除整个 suiyi-trans-block 包裹，恢复为裸文本节点
+  document.querySelectorAll('suiyi-trans-block').forEach((wrapper) => {
+    const original = wrapper.querySelector('suiyi-original')
+    const text = original?.textContent || wrapper.textContent || ''
     const textNode = document.createTextNode(text)
-    el.replaceWith(textNode)
+    wrapper.replaceWith(textNode)
+    count++
   })
 
   // 清除标记
