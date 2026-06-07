@@ -1,0 +1,243 @@
+/* ==================== CSS 变量 ==================== */
+:root {
+  --suiyi-bg: #ffffff;
+  --suiyi-bg-secondary: #f8f9fa;
+  --suiyi-text: #1a1a2e;
+  --suiyi-text-secondary: #6c757d;
+  --suiyi-border: #e0e0e0;
+  --suiyi-accent: #4f46e5;
+  --suiyi-accent-hover: #4338ca;
+  --suiyi-radius: 8px;
+  --suiyi-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --suiyi-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ==================== 全局重置 ==================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--suiyi-font);
+  font-size: 14px;
+  color: var(--suiyi-text);
+  background: var(--suiyi-bg);
+  line-height: 1.5;
+}
+
+/* ==================== 按钮 ==================== */
+.suiyi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: var(--suiyi-radius);
+  background: var(--suiyi-bg);
+  color: var(--suiyi-text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suiyi-btn:hover {
+  background: var(--suiyi-bg-secondary);
+}
+
+.suiyi-btn.primary {
+  background: var(--suiyi-accent);
+  color: #fff;
+  border-color: var(--suiyi-accent);
+}
+
+.suiyi-btn.primary:hover {
+  background: var(--suiyi-accent-hover);
+}
+
+.suiyi-btn.secondary {
+  background: var(--suiyi-bg-secondary);
+}
+
+.suiyi-link-btn {
+  background: none;
+  border: none;
+  color: var(--suiyi-accent);
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.suiyi-link-btn:hover {
+  color: var(--suiyi-accent-hover);
+}
+
+/* ==================== Sidepanel 布局 ==================== */
+.suiyi-sidepanel {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 16px;
+  gap: 16px;
+}
+
+.suiyi-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.suiyi-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.suiyi-version {
+  font-size: 12px;
+  color: var(--suiyi-text-secondary);
+}
+
+.suiyi-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--suiyi-bg-secondary);
+  border-radius: var(--suiyi-radius);
+}
+
+.suiyi-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ==================== Popup 布局 ==================== */
+.suiyi-popup {
+  width: 280px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.suiyi-popup-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.suiyi-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suiyi-popup-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--suiyi-border);
+}
+
+/* ==================== 翻译面板 ==================== */
+.suiyi-translate-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.suiyi-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: var(--suiyi-radius);
+  font-family: var(--suiyi-font);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.suiyi-textarea:focus {
+  border-color: var(--suiyi-accent);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.suiyi-result-box {
+  padding: 12px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: var(--suiyi-radius);
+  background: var(--suiyi-bg-secondary);
+  min-height: 80px;
+  line-height: 1.6;
+  color: var(--suiyi-text);
+}
+
+.suiyi-result-box.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--suiyi-text-secondary);
+}
+
+/* ==================== 选择器 ==================== */
+.suiyi-select-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suiyi-select-group label {
+  font-size: 13px;
+  color: var(--suiyi-text-secondary);
+  min-width: 48px;
+}
+
+.suiyi-select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--suiyi-bg);
+  cursor: pointer;
+  outline: none;
+}
+
+.suiyi-select:focus {
+  border-color: var(--suiyi-accent);
+}
+
+/* ==================== 引擎选择器 ==================== */
+.suiyi-engine-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.suiyi-engine-chip {
+  padding: 4px 12px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--suiyi-bg);
+}
+
+.suiyi-engine-chip.active {
+  background: var(--suiyi-accent);
+  color: #fff;
+  border-color: var(--suiyi-accent);
+}
+
+.suiyi-engine-chip:hover:not(.active) {
+  background: var(--suiyi-bg-secondary);
+}

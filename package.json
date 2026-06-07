@@ -1,24 +1,52 @@
 {
-  "name": "chrome-translation-extension",
-  "version": "1.0.0",
-  "description": "Chrome translation extension with pluggable service architecture",
-  "type": "module",
+  "name": "suiyi",
+  "displayName": "随译 - 双语对照翻译插件",
+  "version": "0.0.1",
+  "description": "一款支持双语对照、划词翻译、悬停翻译的浏览器翻译插件",
+  "author": "zoukun",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "plasmo dev",
+    "dev:firefox": "plasmo dev --target=firefox-mv2",
+    "build": "plasmo build",
+    "build:firefox": "plasmo build --target=firefox-mv2",
+    "package": "plasmo package",
+    "clean": "rm -rf build .plasmo"
+  },
+  "dependencies": {
+    "plasmo": "latest",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@plasmohq/storage": "^1.13.0",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.268",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.11",
-    "vite-plugin-web-extension": "^4.1.6"
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/chrome": "^0.0.270",
+    "typescript": "^5.5.0",
+    "prettier": "^3.3.0"
   },
-  "keywords": [
-    "chrome-extension",
-    "translation",
-    "manifest-v3",
-    "typescript"
-  ],
-  "license": "MIT"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "sharp"
+    ]
+  },
+  "manifest": {
+    "host_permissions": [
+      "https://*/*",
+      "http://*/*"
+    ],
+    "permissions": [
+      "storage",
+      "activeTab",
+      "sidePanel",
+      "scripting",
+      "tabs"
+    ]
+  }
 }

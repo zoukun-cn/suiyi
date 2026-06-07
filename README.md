@@ -1,97 +1,60 @@
-# Chrome 翻译扩展插件
+# 随译 Suiyi
 
-基于 Manifest V3 的 Google Chrome 浏览器翻译扩展插件，支持划词悬浮翻译、右键菜单翻译、整页翻译以及 Popup 输入框翻译。
+> 一款支持双语对照、划词翻译、悬停翻译的浏览器翻译插件
 
 ## 技术栈
 
-- **Manifest V3** Chrome 扩展规范
-- **TypeScript** 全项目类型安全
-- **Vite** 构建工具，配合 `vite-plugin-web-extension`
-- **原生 DOM API** 保持轻量
+- 🧩 [Plasmo](https://docs.plasmo.com/) — 浏览器扩展框架
+- ⚛️ React 18 + TypeScript 5
+- 🎨 CSS Variables (零运行时样式)
 
-## 目录结构
+## 功能
 
-```
-├── background/
-│   ├── index.ts              # Service Worker 入口
-│   ├── message-handler.ts    # 统一消息路由
-│   └── context-menu.ts       # 右键菜单注册与处理
-├── content/
-│   ├── index.ts              # Content Script 入口
-│   ├── selection-handler.ts  # 划词/悬停监听
-│   ├── tooltip-renderer.ts   # 翻译浮窗渲染
-│   └── page-translator.ts    # 整页翻译 DOM 操作
-├── popup/
-│   ├── index.html
-│   ├── index.ts              # Popup 入口
-│   └── popup.css             # Popup 样式
-├── services/
-│   ├── interface.ts          # ITranslationService 接口、Language 枚举
-│   ├── pass-through.ts       # 默认原样输出实现
-│   ├── registry.ts           # TranslationServiceRegistry 注册表
-│   └── manager.ts            # TranslationManager 转发管理器
-├── icons/                    # 扩展图标
-├── manifest.json             # MV3 清单
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-└── README.md
-```
-
-## 支持的功能
-
-| 功能 | 描述 |
-|------|------|
-| 划词悬浮翻译 | 选中网页文字，悬浮显示翻译结果 |
-| 右键菜单翻译 | 选中文本后右键点击翻译菜单项 |
-| 整页翻译 | 一键翻译整个网页内容，支持恢复原文 |
-| Popup 输入框翻译 | 在插件弹窗中输入文本进行翻译 |
-
-## 核心架构
-
-### 可插拔翻译服务
-
-- **ITranslationService**：翻译服务核心接口
-- **PassThroughService**：默认实现，原样输出输入文本
-- **TranslationServiceRegistry**：服务注册表，管理所有实现
-- **TranslationManager**：统一转发入口，调用方不直接依赖具体实现
-
-### 数据流
-
-```
-[用户交互] -> TranslationRequest -> Service Worker -> TranslationManager -> ITranslationService -> TranslationResult -> 展示
-```
+- 📄 **页面双语对照翻译**：保留原网页布局，译文插入原文下方
+- 📝 **划词翻译**：选中即译，快速查词
+- 👆 **悬停翻译**：鼠标悬停自动翻译
+- 🔌 **多引擎支持**：Google / DeepL / OpenAI 等多翻译后端
+- 📋 **翻译历史**：记住翻译记录便于回顾
 
 ## 开发
 
-### 安装依赖
-
 ```bash
-npm install
+# 安装依赖
+pnpm install
+
+# 启动开发服务器
+pnpm dev
+
+# 构建生产版本
+pnpm build
+
+# 打包上传
+pnpm package
 ```
 
-### 开发模式
+### 加载扩展
 
-```bash
-npm run dev
+1. 打开 `chrome://extensions`
+2. 启用"开发者模式"
+3. 点击"加载已解压的扩展程序"
+4. 选择 `build/chrome-mv3-dev` 目录
+
+## 项目结构
+
+```
+src/
+├── background/          # Service Worker
+├── sidepanel/           # 侧边栏 (主界面)
+├── popup/               # 弹窗 (快捷操作)
+├── contents/            # 内容脚本
+├── components/          # 共享组件
+├── hooks/               # 自定义 Hooks
+├── services/            # 业务逻辑
+├── lib/                 # 工具函数
+├── types/               # 类型定义
+└── styles/              # 全局样式
 ```
 
-### 构建
+## License
 
-```bash
-npm run build
-```
-
-构建产物输出到 `dist/` 目录。
-
-### 加载到 Chrome
-
-1. 打开 Chrome 扩展管理页面：`chrome://extensions/`
-2. 开启右上角「开发者模式」
-3. 点击「加载已解压的扩展程序」
-4. 选择项目根目录下的 `dist/` 文件夹
-
-## 扩展说明
-
-- 翻译服务采用**可插拔架构**，默认实现为原样输出，方便接入真实翻译 API
-- 所有翻译请求通过 `TranslationManager` 统一转发，便于后续扩展缓存、日志、降级等能力
+MIT
