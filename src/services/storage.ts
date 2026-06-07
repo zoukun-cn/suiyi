@@ -14,7 +14,7 @@ const SETTINGS_KEY = 'suiyi_settings'
 const DEFAULT_SETTINGS: UserSettings = {
   defaultFrom: 'auto',
   defaultTo: 'zh-CN',
-  defaultEngine: 'google',
+  defaultEngine: 'deepseek',
   translateMode: 'bilingual',
   enableHover: true,
   enableSelection: true,
@@ -22,8 +22,9 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 export async function getSettings(): Promise<UserSettings> {
   const data = await storage.get(SETTINGS_KEY)
+  console.log('[Storage] Loaded settings:', data)
   if (data) {
-    return { ...DEFAULT_SETTINGS, ...(data as UserSettings) }
+    return { ...DEFAULT_SETTINGS, ...(data as unknown as UserSettings) }
   }
   return DEFAULT_SETTINGS
 }
@@ -46,7 +47,7 @@ const MAX_HISTORY = 100
 
 export async function getHistory(): Promise<HistoryItem[]> {
   const data = await local.get(HISTORY_KEY)
-  return data ? (data as HistoryItem[]) : []
+  return data ? (data as unknown as HistoryItem[]) : []
 }
 
 export async function addHistory(item: HistoryItem): Promise<void> {
