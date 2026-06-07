@@ -10,7 +10,7 @@ export function sendMessage<T = unknown>(
 ): Promise<MessageResponse<T>> {
   return new Promise((resolve, reject) => {
     const message: Message = { type, payload }
-
+    console.log("[Suiyi] Sending message:", message)
     chrome.runtime.sendMessage(message, (response: MessageResponse<T>) => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message))

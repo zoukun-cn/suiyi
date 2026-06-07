@@ -41,6 +41,7 @@ initialize()
 // ==================== 消息监听 ====================
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log("[Suiyi BG] Received message:", message, _sender);
   switch (message.type) {
     case 'TRANSLATE_TEXT': {
       handleTranslateRequest(message.payload)
@@ -73,14 +74,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           }
           sendResponse({ success: true })
         })
-        .catch((error) => sendResponse({ success: false, error: error.message }))
-      return true
-    }
-
-    case 'OPEN_SIDE_PANEL': {
-      chrome.sidePanel
-        .open({ windowId: _sender.tab?.windowId! })
-        .then(() => sendResponse({ success: true }))
         .catch((error) => sendResponse({ success: false, error: error.message }))
       return true
     }

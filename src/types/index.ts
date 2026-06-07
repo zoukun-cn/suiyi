@@ -68,7 +68,6 @@ export type MessageType =
   | 'TRANSLATE_PAGE'
   | 'GET_SETTINGS'
   | 'SAVE_SETTINGS'
-  | 'OPEN_SIDE_PANEL'
   | 'SHOW_TOOLTIP'
   | 'HIDE_TOOLTIP'
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { sendMessage, sendMessageToTab, getActiveTab } from '../lib/messaging'
+import { sendMessageToTab, getActiveTab } from '../lib/messaging'
 import { getSettings } from '../services/storage'
 import { LANGUAGES, ENGINES } from '../types'
 import type { LanguageCode, EngineType, UserSettings } from '../types'
@@ -13,8 +13,10 @@ export default function App() {
     getSettings().then(setSettings)
   }, [])
 
-  const openSidePanel = useCallback(() => {
-    sendMessage('OPEN_SIDE_PANEL').catch(console.error)
+  const openSidePanel = useCallback(async () => {
+    // 直接在 popup 中调用，保留 user gesture（经 Service Worker 中转会丢失手势）
+    const currentWindow = await chrome.windows.getCurrent()
+    await chrome.sidePanel.open({ windowId: currentWindow.id })
   }, [])
 
   const translateCurrentPage = useCallback(async () => {
