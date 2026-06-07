@@ -66,6 +66,9 @@ export interface HistoryItem {
 export type MessageType =
   | 'TRANSLATE_TEXT'
   | 'TRANSLATE_PAGE'
+  | 'EXECUTE_PAGE_TRANSLATE'
+  | 'RESTORE_PAGE'
+  | 'PAGE_TRANSLATION_STATUS'
   | 'GET_SETTINGS'
   | 'SAVE_SETTINGS'
   | 'SHOW_TOOLTIP'

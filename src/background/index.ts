@@ -49,6 +49,106 @@ async function initialize() {
 
 initialize()
 
+// ==================== 右键菜单 ====================
+
+const MENU_TRANSLATE = 'suiyi-translate-page'
+const MENU_RESTORE = 'suiyi-restore-page'
+const tabTranslationState = new Map<number, boolean>() // tabId → translated
+
+/** 从 manifest 获取 page-translator content script 的实际文件名（含 hash） */
+function getContentScriptFile(): string | null {
+  const manifest = chrome.runtime.getManifest()
+  for (const cs of manifest.content_scripts || []) {
+    for (const js of cs.js || []) {
+      if (js.startsWith('page-translator')) return js
+    }
+  }
+  return null
+}
+
+// 创建右键菜单
+chrome.contextMenus.create({
+  id: MENU_TRANSLATE,
+  title: '🌐 翻译网页',
+  contexts: ['page'],
+})
+
+chrome.contextMenus.create({
+  id: MENU_RESTORE,
+  title: '🔄 还原网页',
+  contexts: ['page'],
+  visible: false,
+})
+
+// 右键菜单点击
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (!tab?.id) {
+    console.error('[Suiyi BG] Context menu click without tab id')
+    return
+  }
+
+  if (info.menuItemId === MENU_TRANSLATE) {
+    getSettings().then(async (settings) => {
+      const payload = {
+        from: settings.defaultFrom,
+        to: settings.defaultTo,
+        engine: settings.defaultEngine,
+      }
+      console.log(`[Suiyi BG] Sending EXECUTE_PAGE_TRANSLATE to tab ${tab.id}:`, payload)
+
+      try {
+        const res = await chrome.tabs.sendMessage(tab.id!, {
+          type: 'EXECUTE_PAGE_TRANSLATE',
+          payload,
+        })
+        console.log('[Suiyi BG] Content script response:', res)
+      } catch {
+        // content script 未注入（页面在扩展加载前打开），手动注入
+        console.log('[Suiyi BG] Content script not loaded, injecting...')
+        try {
+          const file = getContentScriptFile()
+          if (file) {
+            await chrome.scripting.executeScript({
+              target: { tabId: tab.id! },
+              files: [file],
+            })
+            const res = await chrome.tabs.sendMessage(tab.id!, {
+              type: 'EXECUTE_PAGE_TRANSLATE',
+              payload,
+            })
+            console.log('[Suiyi BG] Content script response (after inject):', res)
+          } else {
+            console.error('[Suiyi BG] Could not find page-translator in manifest')
+          }
+        } catch (err2) {
+          console.error('[Suiyi BG] Injection failed:', err2)
+        }
+      }
+    })
+  }
+
+  if (info.menuItemId === MENU_RESTORE) {
+    console.log(`[Suiyi BG] Sending RESTORE_PAGE to tab ${tab.id}`)
+    chrome.tabs.sendMessage(tab.id!, { type: 'RESTORE_PAGE' }).then((res) => {
+      console.log('[Suiyi BG] RESTORE response:', res)
+    }).catch((err) => {
+      console.error('[Suiyi BG] Failed to send RESTORE_PAGE:', err)
+    })
+  }
+})
+
+// 切换 Tab 时同步右键菜单状态
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  const isTranslated = tabTranslationState.get(tabId) ?? false
+  chrome.contextMenus.update(MENU_TRANSLATE, { visible: !isTranslated })
+  chrome.contextMenus.update(MENU_RESTORE, { visible: isTranslated })
+})
+
+// Tab 关闭时清理状态
+chrome.tabs.onRemoved.addListener((tabId) => {
+  tabTranslationState.delete(tabId)
+})
+
 // ==================== 监听 Storage 变更 ====================
 
 // 当用户在设置页面修改 API Key 时，自动同步到引擎实例
@@ -88,6 +188,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         .then((result) => sendResponse({ success: true, data: result }))
         .catch((error) => sendResponse({ success: false, error: error.message }))
       return true
+    }
+
+    case 'PAGE_TRANSLATION_STATUS': {
+      const { status } = message.payload as { status: 'translated' | 'restored' }
+      const tabId = _sender.tab?.id
+      if (tabId != null) {
+        if (status === 'translated') {
+          tabTranslationState.set(tabId, true)
+          chrome.contextMenus.update(MENU_TRANSLATE, { visible: false })
+          chrome.contextMenus.update(MENU_RESTORE, { visible: true })
+        } else {
+          tabTranslationState.set(tabId, false)
+          chrome.contextMenus.update(MENU_TRANSLATE, { visible: true })
+          chrome.contextMenus.update(MENU_RESTORE, { visible: false })
+        }
+      }
+      sendResponse({ success: true })
+      return false
     }
 
     case 'GET_SETTINGS': {

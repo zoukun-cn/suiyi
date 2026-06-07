@@ -30,7 +30,7 @@ export class DeepSeekEngine implements TranslationEngine {
   readonly type: EngineType = 'deepseek'
   readonly name = 'DeepSeek'
   private apiKey: string | null = null
-  private model: string = 'deepseek-v4-pro'
+  private model: string = 'deepseek-v4-flash'
 
   setApiKey(key: string): void {
     this.apiKey = key
@@ -38,7 +38,7 @@ export class DeepSeekEngine implements TranslationEngine {
 
   constructor() {
     // 可根据需要调整默认模型
-    this.model = 'deepseek-v4-pro'
+    this.model = 'deepseek-v4-flash'
     this.apiKey = ''
   }
 

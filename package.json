@@ -46,7 +46,8 @@
       "activeTab",
       "sidePanel",
       "scripting",
-      "tabs"
+      "tabs",
+      "contextMenus"
     ]
   }
 }

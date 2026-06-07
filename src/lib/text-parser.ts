@@ -34,7 +34,7 @@ export function extractTranslatableSegments(root: Node): TextSegment[] {
       if (/^[\d\s.,;:!?+\-=*/%^&|@#$~`'"()[\]{}<>\\/]+$/.test(text)) {
         return NodeFilter.FILTER_REJECT
       }
-
+      console.log(`[TextParser] Found segment: "${text}"`)
       return NodeFilter.FILTER_ACCEPT
     },
   })
