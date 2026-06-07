@@ -9,6 +9,9 @@ import { getApiKey, getSettings, saveSettings } from '../services/storage'
 
 export {}
 
+// 点击扩展图标直接打开侧边栏（无需 popup）
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+
 // ==================== 初始化翻译引擎 ====================
 
 // 注册内置引擎
