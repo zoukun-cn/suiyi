@@ -117,3 +117,24 @@ export const ENGINES: Engine[] = [
   { type: 'openai', name: 'OpenAI', enabled: false, needsApiKey: true },
   { type: 'deepseek', name: 'DeepSeek', enabled: true, needsApiKey: true },
 ]
+
+
+/** 不需要翻译的标签 */
+export const SKIP_TAGS = new Set([
+  'script', 'style', 'code', 'pre', 'noscript', 'textarea', 'input', 'kbd', 'nav', 'footer', 'input' ,'button'
+])
+
+/** 默认跳过属性（属性名=值 匹配时跳过） */
+export const SKIP_ATTRS = new Map([
+  ['aria-hidden', 'true'],
+  ['translate', 'no'],
+])
+
+/** 默认跳过 CSS 样式（getComputedStyle 匹配时跳过） */
+export const SKIP_STYLES = new Map([
+  ['display', 'none'],
+  ['opacity', '0'],
+  ['transform', 'scale(0)'],
+  ['visibility', 'hidden'],
+
+])

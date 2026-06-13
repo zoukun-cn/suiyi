@@ -1,5 +1,7 @@
 // 文本解析工具 — 将页面文本拆分为可翻译的片段
 
+import { SKIP_ATTRS, SKIP_STYLES, SKIP_TAGS } from "../types"
+
 // ==================== Public Interfaces ====================
 
 /** 文本 (用于双语对照渲染) */
@@ -13,7 +15,7 @@ export interface TextSegment {
 
 /** 段落文本 (用于双语对照渲染) */
 export interface ParagraphTextSegment extends TextSegment {
-  paragraphNode?: Element // 可选：关联的块级父元素（如 <p> <div>）
+  paragraphNode: Element // 可选：关联的块级父元素（如 <p> <div>）
   nodes?: Text[] // 可选：同一段落内的所有文本节点（仅段落模式）
 }
 
@@ -40,24 +42,77 @@ abstract class AbstractTranslatableTextParser<T extends TextSegment> implements 
 
   /** 不需要翻译的 HTML 标签 */
   protected skipTags: Set<string>
+  /** 跳过匹配该属性值的元素（如 aria-hidden="true"） */
+  protected skipAttrs: Map<string, string>
+  /** 跳过匹配该 CSS 样式的元素（如 display:none） */
+  protected skipStyles: Map<string, string>
 
-  constructor(skipTags?: Set<string>) {
-    this.skipTags = skipTags ?? new Set([
-      'script', 'style', 'code', 'pre', 'noscript', 'textarea', 'input', 'kbd', 'nav', 'footer',
-    ])
+  constructor(skipTags?: Set<string>, skipAttrs?: Map<string, string>, skipStyles?: Map<string, string>) {
+    this.skipTags = skipTags ?? SKIP_TAGS
+    this.skipAttrs = skipAttrs ?? SKIP_ATTRS
+    this.skipStyles = skipStyles ?? SKIP_STYLES
   }
 
+  private _shouldSkipElement(e: Element): boolean {
+    if (this.skipTags.has(e.tagName.toLowerCase())) return true
+    if (e.classList.contains('notranslate')) return true
+    if ((e as HTMLElement).isContentEditable) return true
+    for (const [k, v] of this.skipAttrs) {
+      if (e.getAttribute(k) === v) return true
+    }
+    // 样式匹配需要计算性能，放在最后检查
+    let computedStyle = window.getComputedStyle(e)
+    for (const [prop, val] of this.skipStyles) {
+      if (computedStyle.getPropertyValue(prop) === val) return true
+    }
+    return  e instanceof HTMLElement? this.isElementVisible(e, computedStyle) === false : false
+  }
+
+  protected isElementVisible(element: HTMLElement, computedStyle: CSSStyleDeclaration | null): boolean {
+    const style = computedStyle ?? getComputedStyle(element);
+    if (parseFloat(style.opacity) === 0) return false;
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
+    
+    // 以下逻辑仅判断元素是否在当前视口内
+    const isInViewport = rect.top < window.innerHeight && rect.bottom > 0 && rect.left < window.innerWidth && rect.right > 0;
+    return isInViewport;
+  }
+
+  protected shouldSkipElement(e: Element): boolean {
+    let result = this._shouldSkipElement(e)
+    if (!result) {
+      console.log(`[TextParser] Skipping element: <${e.tagName.toLowerCase()} class="${e.className}">`)
+    }
+    return result
+  }
 }
 
-class TranslatableTextNodeParser extends AbstractTranslatableTextParser<TextSegment> {
+export class TranslatableTextNodeParser extends AbstractTranslatableTextParser<TextSegment> {
   extractSegments(root: Node): TextSegment[] {
     const segments: TextSegment[] = []
     const skipSelector = [...this.skipTags].join(', ')
+    const skipAttrSelector = [...this.skipAttrs.entries()]
+      .map(([k, v]) => `[${k}="${v}"]`)
+      .join(', ')
+    const skipStyles = this.skipStyles
+    const symbolsOnlyRe = this.SYMBOLS_ONLY_RE
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node: Text) {
         // 原生 closest() 沿祖先链检查，确保文本不在排除元素内
         if (node.parentElement?.closest(skipSelector)) {
           return NodeFilter.FILTER_REJECT
+        }
+        if (skipAttrSelector && node.parentElement?.closest(skipAttrSelector)) {
+          return NodeFilter.FILTER_REJECT
+        }
+        const parent = node.parentElement
+        if (parent) {
+          for (const [prop, val] of skipStyles) {
+            if (window.getComputedStyle(parent).getPropertyValue(prop) === val) {
+              return NodeFilter.FILTER_REJECT
+            }
+          }
         }
 
         // 跳过空/空白文本
@@ -65,7 +120,7 @@ class TranslatableTextNodeParser extends AbstractTranslatableTextParser<TextSegm
         if (!text || text.length < 2) return NodeFilter.FILTER_REJECT
 
         // 跳过纯数字/符号/标点的文本（无实际可翻译内容）
-        if (this.SYMBOLS_ONLY_RE.test(text)) {
+        if (symbolsOnlyRe.test(text)) {
           return NodeFilter.FILTER_REJECT
         }
 
@@ -116,16 +171,10 @@ class TranslatableParagraphCtx {
     this.pieces.push(piece)
   }
 
-  currPieceSize(): number {
-    const curr = this.currPiece()
-    if (!curr) return 0
-    return curr.nodes.length;
-  }
-
 }
 
 
-class TranslatableParagraphParser extends AbstractTranslatableTextParser<ParagraphTextSegment> {
+export class TranslatableParagraphParser extends AbstractTranslatableTextParser<ParagraphTextSegment> {
 
   // ---- 内联文本标签：不打断段落 ----
   private static readonly INLINE_TEXT_TAGS = new Set([
@@ -149,13 +198,17 @@ class TranslatableParagraphParser extends AbstractTranslatableTextParser<Paragra
     const ctx = new TranslatableParagraphCtx(root, [{ parentElement: null, nodes: [] }])
     this.walkNode(ctx, root)
 
+    // remove trailing empty
+    const last = ctx.currPiece()
+    if (last && last.nodes.length === 0) ctx.pieces.pop()
+
     return ctx.pieces.map((p, i) => ({
       id: `suiyi-p-${i}`,
       text: p.nodes.map(n => n.textContent || '').join(''),
       node: p.nodes[0],
       startOffset: 0,
       endOffset: p.nodes.reduce((s, n) => s + (n.textContent?.length || 0), 0),
-      paragraphNode: p.parentElement || undefined,
+      paragraphNode: p.parentElement!,
       nodes: p.nodes,
     }))
   }
@@ -177,12 +230,9 @@ class TranslatableParagraphParser extends AbstractTranslatableTextParser<Paragra
     if (!isShadow) {
       if (
         TranslatableParagraphParser.INLINE_IGNORE_TAGS.has(el.nodeName) ||
-        this.skipTags.has(el.nodeName.toLowerCase()) ||
-        el.classList.contains('notranslate') ||
-        el.getAttribute('translate') === 'no' ||
-        (el as HTMLElement).isContentEditable
+        this.shouldSkipElement(el)
       ) {
-        if (ctx.currPieceSize() > 0) {
+        if (ctx.currPiece()!.nodes.length > 0) {
           ctx.addPiece({ parentElement: null, nodes: [] })
         }
         return
@@ -200,11 +250,13 @@ class TranslatableParagraphParser extends AbstractTranslatableTextParser<Paragra
     const text = node.textContent?.trim()
     if (!text || text.length < 1) return
 
-    if (!ctx.currPiece().parentElement) {
-      ctx.currPiece().parentElement = this.findBlockParent(ctx, node)
+    const piece = ctx.currPiece()!
+
+    if (!piece.parentElement) {
+      piece.parentElement = this.findBlockParent(ctx, node)
     }
 
-    ctx.currPiece().nodes.push(node)
+    piece.nodes.push(node)
   }
 
   private walkChildren(ctx: TranslatableParagraphCtx, parent: Node): void {
@@ -219,9 +271,9 @@ class TranslatableParagraphParser extends AbstractTranslatableTextParser<Paragra
       if (TranslatableParagraphParser.INLINE_TEXT_TAGS.has(el.nodeName)) {
         this.walkNode(ctx, child)
       } else {
-        if (ctx.currPiece().nodes.length > 0) ctx.addPiece({ parentElement: null, nodes: [] })
+        if (ctx.currPiece()!.nodes.length > 0) ctx.addPiece({ parentElement: null, nodes: [] })
         this.walkNode(ctx, child)
-        if (ctx.currPiece().nodes.length > 0) ctx.addPiece({ parentElement: null, nodes: [] })
+        if (ctx.currPiece()!.nodes.length > 0) ctx.addPiece({ parentElement: null, nodes: [] })
       }
     }
   }
@@ -245,3 +297,4 @@ class TranslatableParagraphParser extends AbstractTranslatableTextParser<Paragra
   }
 
 }
+
