@@ -1,7 +1,8 @@
 // 页面翻译注入内容脚本 — 双语对照翻译
 import type { PlasmoCSConfig } from 'plasmo'
 import { sendMessage } from '../lib/messaging'
-import { extractTranslatableSegments, SKIP_SELECTOR } from '../lib/text-parser'
+import { extractTranslatableSegmentsByParagraph, SKIP_SELECTOR } from '../lib/text-parser'
+import { partition } from '../lib/batch-utils'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -11,43 +12,7 @@ export const config: PlasmoCSConfig = {
 // ==================== 翻译状态 ====================
 
 let isTranslating = false
-const translatedCache = new Map<string, string>()
 const TRANSLATED_ATTR = 'data-suiyi-translated'
-
-// ==================== Toast ====================
-
-let toast: HTMLDivElement | null = null
-
-function getOrCreateToast(): HTMLDivElement {
-  if (toast) return toast
-  toast = document.createElement('div')
-  toast.id = 'suiyi-toast'
-  toast.setAttribute('style', `
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2147483647;
-    background: #1a1a2e;
-    color: #ffffff;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    display: none;
-    pointer-events: none;
-  `)
-  document.body.appendChild(toast)
-  return toast
-}
-
-function showToast(text: string, duration = 3000): void {
-  const t = getOrCreateToast()
-  t.textContent = text
-  t.style.display = 'block'
-  setTimeout(() => { t.style.display = 'none' }, duration)
-}
 
 // ==================== 消息监听 ====================
 
@@ -93,60 +58,37 @@ async function translatePage(payload: {
 }): Promise<number> {
   const { from, to, engine } = payload
   console.log(`[Suiyi CS] Translating page: ${from} → ${to} via ${engine || 'default'}`)
-
   isTranslating = true
 
   try {
-    const segments = extractTranslatableSegments(document.body)
+    const segments = extractTranslatableSegmentsByParagraph(document.body)
     const texts = segments.map((s) => s.text)
+    const translationMap = new Map<string, string>()
 
-    console.log(`[Suiyi CS] Found ${segments.length} translatable segments`)
-
-    showToast(`正在翻译... 0/${texts.length}`)
-
-    // 合并批量翻译 — 200 条一批
-    const BATCH_SIZE = 200
-    let translatedSoFar = 0
-
-    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-      const batch = texts.slice(i, i + BATCH_SIZE)
-      const untranslated = batch.filter((t) => !translatedCache.has(t))
-
-      if (untranslated.length > 0) {
-        try {
-          const response = await sendMessage('BATCH_TRANSLATE_TEXT', {texts: untranslated, from, to, engine})
-          if (response?.success && response.data) {
-            // data = { "原文": "译文", ... }
-            const results = response.data as Record<string, string>
-            for (const [original, translated] of Object.entries(results)) {
-              if (translated) translatedCache.set(original, translated)
-            }
-          }
-        } catch (err) {
-          console.warn('[Suiyi CS] Batch translate failed, trying individual fallback...', err)
-          // 回退到逐条翻译
-          for (const text of untranslated) {
-            try {
-              const r = await sendMessage('TRANSLATE_TEXT', { text, from, to, engine })
-              if (r?.success && r.data) {
-                translatedCache.set(text, (r.data as { translated: string }).translated)
-              }
-            } catch {
-              // 单条失败继续
-            }
+    for (const batch of partition(texts, 1000)) {
+      try {
+        const response = await sendMessage('BATCH_TRANSLATE_TEXT', {texts: batch, from, to, engine})
+        if (response?.success && response.data) {
+          const results = response.data as Record<string, string>
+          for (const [original, translated] of Object.entries(results)) {
+            if (translated) translationMap.set(original, translated)
           }
         }
+      } catch (err) {
+        console.warn('[Suiyi CS] Batch translate failed, trying individual fallback...', err)
+        for (const text of batch) {
+          try {
+            const r = await sendMessage('TRANSLATE_TEXT', { text, from, to, engine })
+            if (r?.success && r.data) {
+              translationMap.set(text, (r.data as { translated: string }).translated)
+            }
+          } catch { /* skip */ }
+        }
       }
-
-      translatedSoFar = Math.min(i + BATCH_SIZE, texts.length)
-      showToast(`正在翻译... ${translatedSoFar}/${texts.length}`, 0)
     }
 
     // 注入译文
-    const count = injectBilingual(segments)
-    showToast(`翻译完成 (${count} 处)`)
-    console.log(`[Suiyi CS] Injected ${count} translations`)
-    return count
+    return injectBilingual(segments, translationMap)
   } finally {
     isTranslating = false
   }
@@ -155,33 +97,23 @@ async function translatePage(payload: {
 // ==================== 双语注入 ====================
 
 function injectBilingual(
-  segments: ReturnType<typeof extractTranslatableSegments>
+  segments: ReturnType<typeof extractTranslatableSegmentsByParagraph>,
+  translationMap: Map<string, string>
 ): number {
   let count = 0
 
   for (const seg of segments) {
-    const translation = translatedCache.get(seg.text)
+    const translation = translationMap.get(seg.text)
     if (!translation) continue
 
     const el = seg.node.parentElement
     if (!el) continue
 
-    // 原生 closest() 沿祖先链跳过排除元素
-    if (el.closest(SKIP_SELECTOR)) continue
-
-    // 跳过已经翻译的
-    if (el.hasAttribute(TRANSLATED_ATTR)) continue
-
     // 检查文本节点还在 DOM 中
     if (!seg.node.parentNode) continue
 
     try {
-      // 用 <suiyi-original> 包裹原文
-      const originalWrap = document.createElement('suiyi-original')
-      originalWrap.textContent = seg.node.textContent
-      originalWrap.style.cssText = 'all: unset; display: block;'
-
-      // 创建译文
+      // 创建译文（放在原文下方）
       const translatedEl = document.createElement('suiyi-translated')
       translatedEl.textContent = translation
       translatedEl.style.cssText = `
@@ -192,17 +124,10 @@ function injectBilingual(
         font-size: 0.92em;
         border-radius: 0 4px 4px 0;
       `
-
-      // 块级包裹 — 兼容 inline / flex / grid 等任意父布局
-      const wrapper = document.createElement('suiyi-trans-block')
-      wrapper.style.cssText = 'display: block;'
-      wrapper.append(originalWrap, translatedEl)
-
-      // 替换原文文本节点为包裹容器
-      seg.node.replaceWith(wrapper)
-
-      // 标记父元素
-      el.setAttribute(TRANSLATED_ATTR, '')
+      // 标记译文，还原时通过此标识清除
+      translatedEl.setAttribute(TRANSLATED_ATTR, '')
+      // 原文文本节点不动，译文插入到后面
+      seg.paragraphNode.after(translatedEl)
       count++
     } catch {
       // DOM 操作失败，跳过
@@ -217,29 +142,12 @@ function injectBilingual(
 function restorePage(): number {
   let count = 0
 
-  // 还原：移除整个 suiyi-trans-block 包裹，恢复为裸文本节点
-  document.querySelectorAll('suiyi-trans-block').forEach((wrapper) => {
-    const original = wrapper.querySelector('suiyi-original')
-    const text = original?.textContent || wrapper.textContent || ''
-    const textNode = document.createTextNode(text)
-    wrapper.replaceWith(textNode)
+  // 还原：移除所有译文元素，原文文本节点未动无需恢复
+  document.querySelectorAll(`suiyi-translated[${TRANSLATED_ATTR}]`).forEach((el) => {
+    el.remove()
     count++
   })
 
-  // 清除标记
-  document.querySelectorAll(`[${TRANSLATED_ATTR}]`).forEach((el) => {
-    el.removeAttribute(TRANSLATED_ATTR)
-  })
-
-  // 清理 toast
-  if (toast) {
-    toast.remove()
-    toast = null
-  }
-
-  translatedCache.clear()
-
-  showToast('已还原原文')
   console.log(`[Suiyi CS] Restored ${count} translations`)
   return count
 }
