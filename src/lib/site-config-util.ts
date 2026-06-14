@@ -35,11 +35,12 @@ class SiteConfigManager {
   }
 
 
-  handle(segments :ParagraphTextSegment[] ,url: string): ParagraphTextSegment[] {
+  handle(segments: ParagraphTextSegment[], url: string): ParagraphTextSegment[] {
     const configs = this.matchConfigs(url)
     configs.forEach(cfg => {
-      
-    }
+      // TODO
+    })
+    return segments
   }
 
 

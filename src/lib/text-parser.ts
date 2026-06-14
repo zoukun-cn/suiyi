@@ -7,11 +7,13 @@ import { SKIP_ATTRS, SKIP_STYLES, SKIP_TAGS } from "../types"
 interface Segment {
   id: string
   text: string
+  topNode: Element
 }
 
 /** 文本 (用于双语对照渲染) */
 export interface TextSegment  extends Segment {
   node: Text  // 关联的文本节点
+
 }
 
 
@@ -25,7 +27,7 @@ export type TranslatableSegmentParserType = 'TranslatableTextNodeParser' | 'Tran
 
 
 /** 可翻译文本片段提取器 —— 泛型接口，由具体的解析策略实现 */
-interface TranslatableTextParser<T extends TextSegment> {
+export interface TranslatableTextParser<T extends TextSegment> {
   extractSegments(root: Node): T[]
 
 }

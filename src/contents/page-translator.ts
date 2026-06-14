@@ -1,7 +1,8 @@
 // 页面翻译注入内容脚本 — 双语对照翻译
 import type { PlasmoCSConfig } from 'plasmo'
 import { sendMessage } from '../lib/messaging'
-import { TranslatableParagraphParser } from '../lib/text-parser'
+import type { ParagraphTextSegment } from '../lib/text-parser'
+import { textParser } from '../lib/text-parser-service'
 import { partition } from '../lib/batch-utils'
 
 export const config: PlasmoCSConfig = {
@@ -61,7 +62,7 @@ async function translatePage(payload: {
   isTranslating = true
 
   try {
-    const segments = new TranslatableParagraphParser().extractSegments(document.body)
+    const segments = textParser.parse(document.body, 'paragraph') as ParagraphTextSegment[]
     const texts = segments.map((s) => s.text)
     const translationMap = new Map<string, string>()
 
@@ -97,7 +98,7 @@ async function translatePage(payload: {
 // ==================== 双语注入 ====================
 
 function injectBilingual(
-  segments: ReturnType<TranslatableParagraphParser['extractSegments']>,
+  segments: ParagraphTextSegment[],
   translationMap: Map<string, string>
 ): number {
   let count = 0
