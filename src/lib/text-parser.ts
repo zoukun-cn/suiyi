@@ -4,37 +4,67 @@ import { SKIP_ATTRS, SKIP_STYLES, SKIP_TAGS } from "../types"
 
 // ==================== Public Interfaces ====================
 
-interface Segment {
-  id: string
-  text: string
-  topNode: Element
+export abstract class Segment {
+  abstract text: string
+  abstract get topNode(): Node
+  abstract get textNodes(): Text[]
 }
 
 /** 文本 (用于双语对照渲染) */
-export interface TextSegment  extends Segment {
-  node: Text  // 关联的文本节点
+export class TextSegment extends Segment {
+
+  constructor(
+    public text: string,
+    public textNode: Text,
+  ) {
+    super()
+  }
+
+  get topNode(): Node {
+    return this.textNode
+  }
+
+  get textNodes(): Text[] {
+    return [this.textNode]
+  }
 
 }
 
 
 /** 段落文本 (用于双语对照渲染) */
-export interface ParagraphTextSegment extends TextSegment {
-  paragraphNode: Element // 可选：关联的块级父元素（如 <p> <div>）
-  nodes?: Text[] // 可选：同一段落内的所有文本节点（仅段落模式）
+export class ParagraphTextSegment extends Segment {
+  text: string
+  paragraphNode: Element
+  private _textNodes: Text[]
+
+  constructor(text: string, paragraphNode: Element, textNodes: Text[]) {
+    super()
+    this.text = text
+    this.paragraphNode = paragraphNode
+    this._textNodes = textNodes
+  }
+
+  get topNode(): Node {
+    return this.paragraphNode
+  }
+
+  get textNodes(): Text[] {
+    return this._textNodes
+  }
 }
 
 export type TranslatableSegmentParserType = 'TranslatableTextNodeParser' | 'TranslatableParagraphParser'
 
 
 /** 可翻译文本片段提取器 —— 泛型接口，由具体的解析策略实现 */
-export interface TranslatableTextParser<T extends TextSegment> {
+export interface TranslatableTextParser<T extends Segment> {
   extractSegments(root: Node): T[]
 
 }
 
 // ==================== 实现示例：基于文本节点的解析器 ====================
 
-abstract class AbstractTranslatableTextParser<T extends TextSegment> implements TranslatableTextParser<T> {
+abstract class AbstractTranslatableTextParser<T extends Segment> implements TranslatableTextParser<T> {
 
   abstract extractSegments(root: Node): T[]
 
@@ -130,15 +160,10 @@ export class TranslatableTextNodeParser extends AbstractTranslatableTextParser<T
       },
     })
 
-    let id = 0
     let node: Text | null
     while ((node = walker.nextNode() as Text | null)) {
       const text = node.textContent || ''
-      segments.push({
-        id: `suiyi-seg-${id++}`,
-        text,
-        node,
-      })
+      segments.push(new TextSegment(text, node))
     }
     return segments
   }
@@ -201,13 +226,13 @@ export class TranslatableParagraphParser extends AbstractTranslatableTextParser<
     const last = ctx.currPiece()
     if (last && last.nodes.length === 0) ctx.pieces.pop()
 
-    return ctx.pieces.map((p, i) => ({
-      id: `suiyi-p-${i}`,
-      text: p.nodes.map(n => n.textContent || '').join(''),
-      node: p.nodes[0],
-      paragraphNode: p.parentElement!,
-      nodes: p.nodes,
-    }))
+    return ctx.pieces.map(p =>
+      new ParagraphTextSegment(
+        p.nodes.map(n => n.textContent || '').join(''),
+        p.parentElement!,
+        p.nodes,
+      )
+    )
   }
 
   // ========== tree walk ==========

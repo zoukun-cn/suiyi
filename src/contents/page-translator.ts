@@ -1,7 +1,7 @@
 // 页面翻译注入内容脚本 — 双语对照翻译
 import type { PlasmoCSConfig } from 'plasmo'
 import { sendMessage } from '../lib/messaging'
-import type { ParagraphTextSegment } from '../lib/text-parser'
+import type { ParagraphTextSegment, Segment } from '../lib/text-parser'
 import { textParser } from '../lib/text-parser-service'
 import { partition } from '../lib/batch-utils'
 
@@ -62,7 +62,7 @@ async function translatePage(payload: {
   isTranslating = true
 
   try {
-    const segments = textParser.parse(document.body, 'paragraph') as ParagraphTextSegment[]
+    const segments = textParser.parse(document.body, 'paragraph')
     const texts = segments.map((s) => s.text)
     const translationMap = new Map<string, string>()
 
@@ -98,7 +98,7 @@ async function translatePage(payload: {
 // ==================== 双语注入 ====================
 
 function injectBilingual(
-  segments: ParagraphTextSegment[],
+  segments: Segment[],
   translationMap: Map<string, string>
 ): number {
   let count = 0
@@ -107,11 +107,7 @@ function injectBilingual(
     const translation = translationMap.get(seg.text)
     if (!translation) continue
 
-    const el = seg.node.parentElement
-    if (!el) continue
-
-    // 检查文本节点还在 DOM 中
-    if (!seg.node.parentNode) continue
+    if (!seg.topNode.parentNode) continue
 
     try {
       // 创建译文（放在原文下方）
@@ -128,7 +124,7 @@ function injectBilingual(
       // 标记译文，还原时通过此标识清除
       translatedEl.setAttribute(TRANSLATED_ATTR, '')
       // 原文文本节点不动，译文插入到后面
-      seg.paragraphNode.after(translatedEl)
+      seg.topNode.insertBefore(translatedEl, seg.topNode.nextSibling)
       count++
     } catch {
       // DOM 操作失败，跳过
