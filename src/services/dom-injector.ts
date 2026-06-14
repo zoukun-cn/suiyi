@@ -1,4 +1,5 @@
 // DOM 注入服务 — 网页内双语对照翻译的渲染
+import { $ } from '../lib/dom-utils'
 
 /** 已翻译节点的标记属性 */
 const TRANSLATED_ATTR = 'data-suiyi-translated'
@@ -7,13 +8,10 @@ const TRANSLATED_ATTR = 'data-suiyi-translated'
  * 清除页面上的所有翻译注入
  */
 export function clearTranslations(): number {
-  const elements = document.querySelectorAll(`[${TRANSLATED_ATTR}]`)
-  elements.forEach((el) => el.removeAttribute(TRANSLATED_ATTR))
-
-  const translateEls = document.querySelectorAll('suiyi-translate')
-  let count = translateEls.length
-  translateEls.forEach((el) => el.remove())
-
+  $(`[${TRANSLATED_ATTR}]`).removeAttr(TRANSLATED_ATTR)
+  const translateEls = $('suiyi-translated')
+  const count = translateEls.length
+  translateEls.remove()
   return count
 }
 

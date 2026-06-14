@@ -8,6 +8,10 @@ export abstract class Segment {
   abstract text: string
   abstract get topNode(): Node
   abstract get textNodes(): Text[]
+  isEmpty(): boolean {
+    return this.textNodes.length === 0
+  }
+
 }
 
 /** 文本 (用于双语对照渲染) */

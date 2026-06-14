@@ -4,6 +4,8 @@ import { sendMessage } from '../lib/messaging'
 import type { ParagraphTextSegment, Segment } from '../lib/text-parser'
 import { textParser } from '../lib/text-parser-service'
 import { partition } from '../lib/batch-utils'
+import { $ } from '../lib/dom-utils'
+import { siteConfigManager } from '../lib/site-configs'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -62,7 +64,8 @@ async function translatePage(payload: {
   isTranslating = true
 
   try {
-    const segments = textParser.parse(document.body, 'paragraph')
+    let segments = textParser.parse(document.body, 'paragraph')
+    segments = siteConfigManager.handle(segments, location.href)
     const texts = segments.map((s) => s.text)
     const translationMap = new Map<string, string>()
 
@@ -87,7 +90,7 @@ async function translatePage(payload: {
         }
       }
     }
-
+    console.log(`[Suiyi CS] Translated ${translationMap.size} segments, injecting into page...`, translationMap)
     // 注入译文
     return injectBilingual(segments, translationMap)
   } finally {
@@ -124,7 +127,7 @@ function injectBilingual(
       // 标记译文，还原时通过此标识清除
       translatedEl.setAttribute(TRANSLATED_ATTR, '')
       // 原文文本节点不动，译文插入到后面
-      seg.topNode.insertBefore(translatedEl, seg.topNode.nextSibling)
+      seg.topNode.parentNode.insertBefore(translatedEl, seg.topNode.nextSibling)
       count++
     } catch {
       // DOM 操作失败，跳过
@@ -137,14 +140,10 @@ function injectBilingual(
 // ==================== 还原原文 ====================
 
 function restorePage(): number {
-  let count = 0
-
   // 还原：移除所有译文元素，原文文本节点未动无需恢复
-  document.querySelectorAll(`suiyi-translated[${TRANSLATED_ATTR}]`).forEach((el) => {
-    el.remove()
-    count++
-  })
-
+  const els = $(`suiyi-translated[${TRANSLATED_ATTR}]`)
+  const count = els.length
+  els.remove()
   console.log(`[Suiyi CS] Restored ${count} translations`)
   return count
 }

@@ -53,11 +53,6 @@ function setHoverTooltipContent(original: string, translated: string): void {
   `
 }
 
-function setHoverTooltipLoading(): void {
-  const tip = getOrCreateHoverTooltip()
-  tip.textContent = '⏳ 翻译中...'
-}
-
 function hideHoverTooltip(): void {
   if (hoverTooltip) {
     hoverTooltip.style.display = 'none'
@@ -148,7 +143,6 @@ async function translateAndShow(text: string, x: number, y: number): Promise<voi
 
   isTranslating = true
   showHoverTooltip(x, y)
-  setHoverTooltipLoading()
 
   try {
     const response = await sendMessage('TRANSLATE_TEXT', {
