@@ -4,14 +4,16 @@ import { SKIP_ATTRS, SKIP_STYLES, SKIP_TAGS } from "../types"
 
 // ==================== Public Interfaces ====================
 
-/** 文本 (用于双语对照渲染) */
-export interface TextSegment {
+interface Segment {
   id: string
   text: string
-  node: Text // 关联的 DOM 文本节点
-  startOffset: number
-  endOffset: number
 }
+
+/** 文本 (用于双语对照渲染) */
+export interface TextSegment  extends Segment {
+  node: Text  // 关联的文本节点
+}
+
 
 /** 段落文本 (用于双语对照渲染) */
 export interface ParagraphTextSegment extends TextSegment {
@@ -19,19 +21,16 @@ export interface ParagraphTextSegment extends TextSegment {
   nodes?: Text[] // 可选：同一段落内的所有文本节点（仅段落模式）
 }
 
-/**
- * 从 DOM 文本节点提取可翻译的文本片段
- * 过滤掉纯空白、纯数字、代码等不需要翻译的内容
- */
-export function extractTranslatableSegments(root: Node): TextSegment[] {
-  return new TranslatableTextNodeParser().extractSegments(root)
-}
+export type TranslatableSegmentParserType = 'TranslatableTextNodeParser' | 'TranslatableParagraphParser'
+
 
 /** 可翻译文本片段提取器 —— 泛型接口，由具体的解析策略实现 */
 interface TranslatableTextParser<T extends TextSegment> {
   extractSegments(root: Node): T[]
+
 }
 
+// ==================== 实现示例：基于文本节点的解析器 ====================
 
 abstract class AbstractTranslatableTextParser<T extends TextSegment> implements TranslatableTextParser<T> {
 
@@ -137,8 +136,6 @@ export class TranslatableTextNodeParser extends AbstractTranslatableTextParser<T
         id: `suiyi-seg-${id++}`,
         text,
         node,
-        startOffset: 0,
-        endOffset: text.length,
       })
     }
     return segments
@@ -206,8 +203,6 @@ export class TranslatableParagraphParser extends AbstractTranslatableTextParser<
       id: `suiyi-p-${i}`,
       text: p.nodes.map(n => n.textContent || '').join(''),
       node: p.nodes[0],
-      startOffset: 0,
-      endOffset: p.nodes.reduce((s, n) => s + (n.textContent?.length || 0), 0),
       paragraphNode: p.parentElement!,
       nodes: p.nodes,
     }))
