@@ -14,6 +14,28 @@ export abstract class Segment {
 
 }
 
+// 携带翻译结果的 segment
+export class TranslatedSegment extends Segment {
+  text: string
+  translated: string
+  _topNode: Node
+  _textNodes: Text[]
+  constructor(segment: Segment, translated: string) {
+    super()
+    this.text = segment.text
+    this.translated = translated
+    this._topNode = segment.topNode
+    this._textNodes = segment.textNodes
+  }
+
+  get topNode(): Node {
+    return this._topNode
+  }
+  get textNodes(): Text[] {
+    return this._textNodes
+  }
+}
+
 /** 文本 (用于双语对照渲染) */
 export class TextSegment extends Segment {
 
