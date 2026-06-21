@@ -125,15 +125,12 @@ abstract class AbstractTranslatableTextParser<T extends Segment> implements Tran
     return  e instanceof HTMLElement? this.isElementVisible(e, computedStyle) === false : false
   }
 
+  /** 仅检查 CSS/DOM 级别的不可见（opacity、零尺寸），不管视口位置 */
   protected isElementVisible(element: HTMLElement, computedStyle: CSSStyleDeclaration | null): boolean {
     const style = computedStyle ?? getComputedStyle(element);
     if (parseFloat(style.opacity) === 0) return false;
     const rect = element.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return false;
-    
-    // 以下逻辑仅判断元素是否在当前视口内
-    const isInViewport = rect.top < window.innerHeight && rect.bottom > 0 && rect.left < window.innerWidth && rect.right > 0;
-    return isInViewport;
+    return rect.width > 0 && rect.height > 0;
   }
 
   protected shouldSkipElement(e: Element): boolean {

@@ -30,11 +30,7 @@ export abstract class BaseTranslationEngine implements TranslationEngine {
   abstract supports(from: LanguageCode, to: LanguageCode): boolean
 
   /** 默认批量：逐条翻译，子类可按需覆写 */
-  async batchTranslate(
-    texts: string[],
-    from: LanguageCode,
-    to: LanguageCode
-  ): Promise<Map<string, string>> {
+  async batchTranslate(texts: string[],  from: LanguageCode, to: LanguageCode): Promise<Map<string, string>> {
     const result = new Map<string, string>()
     for (const text of texts) {
       try {
@@ -45,6 +41,7 @@ export abstract class BaseTranslationEngine implements TranslationEngine {
     }
     return result
   }
+
 }
 
 // ==================== 翻译服务 ====================

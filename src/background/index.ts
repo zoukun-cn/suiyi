@@ -6,6 +6,7 @@ import { OpenAITranslateEngine } from '../services/engines/openai'
 import { DeepSeekEngine } from '../services/engines/deepseek'
 import type { LanguageCode, EngineType } from '../types'
 import { getApiKey, getSettings, saveSettings } from '../services/storage'
+import { retry } from '../lib/retry-utils'
 
 export {}
 
@@ -281,7 +282,7 @@ async function handleBatchTranslateRequest(payload: BatchTranslatePayload) {
   const eng = translator.get((engine as EngineType) || undefined)
   if (!eng) throw new Error(`Engine "${engine}" not registered`)
 
-  const map = await eng.batchTranslate(texts, from as LanguageCode, to as LanguageCode)
+  const map = await retry(() => eng.batchTranslate(texts, from as LanguageCode, to as LanguageCode))
   return Object.fromEntries(map)
 }
 

@@ -1,5 +1,5 @@
 // DOM 注入服务 — 网页内双语对照翻译的渲染
-import { $ } from '../lib/dom-utils'
+import { $, debounce } from '../lib/dom-utils'
 
 /** 已翻译节点的标记属性 */
 const TRANSLATED_ATTR = 'data-suiyi-translated'
@@ -16,17 +16,28 @@ export function clearTranslations(): number {
 }
 
 /**
- * 监听 DOM 变化，对新内容自动翻译
+ * 监听 DOM 变化，对新内容自动翻译。
+ * 多次 mutation 的 addedNodes 聚合后经 300ms debounce 统一回调。
  */
 export function observeMutations(
-  onNewContent: (addedNodes: NodeList) => void
+  onNewContent: (addedNodes: Node[]) => void
 ): MutationObserver {
+  let pendingNodes: Node[] = []
+
+  const flush = debounce(() => {
+    if (pendingNodes.length > 0) {
+      onNewContent(pendingNodes)
+      pendingNodes = []
+    }
+  }, 300)
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.addedNodes.length > 0) {
-        onNewContent(mutation.addedNodes)
+        pendingNodes.push(...Array.from(mutation.addedNodes))
       }
     }
+    flush()
   })
 
   observer.observe(document.body, {
