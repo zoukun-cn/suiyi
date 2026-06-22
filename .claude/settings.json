@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "src_changed=$(git diff --name-only 2>/dev/null | grep '^src/' | head -1); doc_changed=$(git diff --name-only 2>/dev/null | grep -E '^(doc/|CLAUDE.md)' | head -1); if [ -n \"$src_changed\" ] && [ -z \"$doc_changed\" ]; then echo '{\"systemMessage\": \"源码已变更但文档未更新。请检查是否需要同步更新 doc/ 文档和 CLAUDE.md（参考 CLAUDE.md 中的文档维护表）。\"}'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

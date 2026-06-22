@@ -65,6 +65,24 @@ pnpm clean          # 清理构建产物
 - Commit 风格：中文描述
 - 默认引擎：deepseek
 
+## 文档维护
+
+项目文档位于 `doc/` 目录，`CLAUDE.md` 位于根目录。**代码变更后必须同步更新对应文档：**
+
+| 变更类型 | 需更新的文档 |
+|---|---|
+| 新增/修改翻译引擎 | `CLAUDE.md`（关键文件表）、`doc/ARCHITECTURE.md`（引擎章节）、`doc/DEVELOPMENT.md`（添加引擎流程） |
+| 新增/修改消息类型 | `doc/MESSAGING.md`（消息类型章节）、`doc/ARCHITECTURE.md`（通信模型） |
+| 新增 content script 或修改注入逻辑 | `CLAUDE.md`、`doc/ARCHITECTURE.md`（数据流） |
+| 新增/修改 UI 组件 | `doc/DEVELOPMENT.md`（目录结构） |
+| 修改存储 key 或数据结构 | `doc/ARCHITECTURE.md`（存储布局）、`doc/MESSAGING.md` |
+| 新增 lib 工具函数 | `doc/DEVELOPMENT.md`（目录结构注释） |
+| 修改命名/代码规范 | `doc/CONVENTIONS.md` |
+| 新增依赖或修改构建配置 | `CLAUDE.md`（技术栈）、`doc/README.md`、`doc/DEVELOPMENT.md` |
+| 项目定位/功能变更 | `doc/README.md`、`CLAUDE.md` |
+
+**原则：** 每当 `src/` 下的代码发生变化，在提交前检查：文档描述是否与当前代码一致？不一致就更新。文档是写给人机共同消费的，过时的文档比没有文档更差。
+
 ## 文档索引
 
 | 文档 | 内容 |
