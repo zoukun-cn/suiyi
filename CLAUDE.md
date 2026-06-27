@@ -34,7 +34,7 @@ pnpm clean          # 清理构建产物
 | `src/services/engines/*.ts` | Google / DeepL / OpenAI / DeepSeek 引擎实现 |
 | `src/lib/text-parser.ts` | DOM 文本提取与段落分组 |
 | `src/lib/messaging.ts` | chrome.runtime.sendMessage 类型化封装 |
-| `src/lib/translation-tip-style.ts` | TranslationTipStyle 接口 + TranslationProgress 类型 |
+| `src/lib/translation-tip-style.ts` | TranslationTipStyle 接口定义 |
 | `src/lib/tip-style-manager.ts` | TipStyleManager — 管理提示样式生命周期 |
 | `src/lib/tip-styles/skeleton-tip-style.ts` | 骨架屏占位提示样式 |
 | `src/lib/tip-styles/progress-bar-tip-style.ts` | 底部进度条提示样式 |
@@ -48,12 +48,13 @@ pnpm clean          # 清理构建产物
 
 **翻译引擎**：策略模式，`BaseTranslationEngine` 抽象类 → 各引擎实现。LLM 引擎（OpenAI、DeepSeek）覆写 `batchTranslate()` 用 JSON 批量模式一次请求完成多条翻译。
 
-**页面翻译流程**：`TRANSLATE_PAGE` 消息 → TextParserService 提取文本 → TipStyleManager 启动提示样式（骨架屏/进度条）→ 每 1000 条分片 → `BATCH_TRANSLATE_TEXT` 批量翻译（进度回调更新进度条）→ TipStyleManager.finish() → 注入 `<suiyi-translated>` 元素 → MutationObserver 监听动态内容。
+**页面翻译流程**：`EXECUTE_PAGE_TRANSLATE` 消息 → TextParserService 提取文本 → TipStyleManager 启动提示样式（骨架屏/进度条）→ 每 40 条分片 → `BATCH_TRANSLATE_TEXT` 批量翻译（进度回调更新进度条，骨架屏逐批移除）→ TipStyleManager.showTranslatedTipStyle() → 注入 `<suiyi-translated>` 元素 → MutationObserver 监听动态内容。
 
 **消息类型**（定义在 `src/types/index.ts`）：
 - `TRANSLATE_TEXT` — 单条翻译（划词/悬停/侧边栏输入）
 - `BATCH_TRANSLATE_TEXT` — 批量翻译（整页翻译用）
-- `TRANSLATE_PAGE` / `PAGE_TRANSLATION_STATUS` — 页面翻译控制与状态同步
+- `TRANSLATE_PAGE` / `EXECUTE_PAGE_TRANSLATE` / `RESTORE_PAGE` — 页面翻译控制
+- `PAGE_TRANSLATION_STATUS` — 翻译状态同步（控制右键菜单显示）
 - `GET_SETTINGS` / `SAVE_SETTINGS` — 设置读写
 
 ## 编码约定

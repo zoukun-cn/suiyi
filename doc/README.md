@@ -19,7 +19,7 @@
 | Google Translate | 否 | `translate.googleapis.com`（免费） |
 | DeepL | 是 | `api-free.deepl.com` |
 | OpenAI (GPT) | 是 | `gpt-4o-mini` |
-| DeepSeek | 是 | `deepseek-v4-flash`（默认） |
+| DeepSeek | 是 | `deepseek-chat`（默认） |
 
 ## 技术栈
 
