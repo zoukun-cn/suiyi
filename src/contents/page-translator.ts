@@ -31,7 +31,7 @@ async function translateSegments(
 ): Promise<TranslatedSegment[]> {
   const translatedResult: TranslatedSegment[] = [];
 
-  for (const batch of partition(segments, 1000)) {
+  for (const batch of partition(segments, 40)) {
     const texts = batch.map((s) => s.text)
     try {
       const response = await sendMessage('BATCH_TRANSLATE_TEXT', { texts, from, to, engine })
@@ -131,19 +131,19 @@ class PageTranslator {
       // 2. 启动提示样式
       this.tipStyleManager.showTranslatingTipStyle(segments)
 
-      // 3. 分批翻译并注入，带进度回调
-      const translated = await translateSegments(segments, from, to, engine, (batchTranslated) => {
+      // 3. 分批翻译，每批完成立即注入 DOM 并更新进度
+      let count = 0
+      await translateSegments(segments, from, to, engine, (batchTranslated) => {
         this.tipStyleManager.updateProgress(batchTranslated)
+        count += injectBilingual(batchTranslated, this.translatedBlocks)
       })
 
       // 4. 翻译完成，移除提示样式
       this.tipStyleManager.showTranslatedTipStyle(true)
 
-      // 5. 注入译文
-      const count = injectBilingual(translated, this.translatedBlocks)
       console.log(`[Suiyi CS] ${count} blocks translated`)
 
-      // 6. 监听动态内容（滚动加载、SPA 切换）
+      // 5. 监听动态内容（滚动加载、SPA 切换）
       this.setupMutationObserver()
       return count
     } catch (err) {
@@ -225,28 +225,34 @@ class PageTranslator {
       // 启动提示样式（动态内容：追加骨架屏、累加进度条总数）
       this.tipStyleManager.showTranslatingTipStyle(newSegments)
 
-      this.inProgressBlocks.add(newSegments[0].topNode as Element)
-      translateSegments(newSegments, from, to, engine)
-        .then((translated) => {
+      // 标记新增段为进行中（取首个节点作为代表）
+      if (newSegments[0]?.topNode instanceof Element) {
+        this.inProgressBlocks.add(newSegments[0].topNode)
+      }
+      translateSegments(newSegments, from, to, engine, (batchTranslated) => {
+        // 每批完成立即注入 DOM 并更新进度
+        this.tipStyleManager.updateProgress(batchTranslated)
+        injectBilingual(batchTranslated, this.translatedBlocks)
+      })
+        .then(() => {
           if (!this.active) return
-          // 移除新内容的提示样式
+          // 翻译完成，移除新内容的提示样式
           this.tipStyleManager.showTranslatedTipStyle(true)
-          injectBilingual(translated, this.translatedBlocks)
-          for (const seg of newSegments) {
-            if (seg.topNode instanceof Element) {
-              this.inProgressBlocks.delete(seg.topNode)
-            }
-          }
+          cleanupInProgress()
         })
         .catch(() => {
           // 失败时清理提示元素
           this.tipStyleManager.showTranslatedTipStyle(false)
-          for (const seg of newSegments) {
-            if (seg.topNode instanceof Element) {
-              this.inProgressBlocks.delete(seg.topNode)
-            }
-          }
+          cleanupInProgress()
         })
+
+      const cleanupInProgress = (): void => {
+        for (const seg of newSegments) {
+          if (seg.topNode instanceof Element) {
+            this.inProgressBlocks.delete(seg.topNode)
+          }
+        }
+      }
     })
   }
 

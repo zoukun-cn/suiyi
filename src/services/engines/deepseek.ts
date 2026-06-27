@@ -35,7 +35,7 @@ export class DeepSeekEngine extends BaseTranslationEngine {
   readonly type: EngineType = 'deepseek'
   readonly name = 'DeepSeek'
   private apiKey: string | null = null
-  private model: string = 'deepseek-v4-flash'
+  private model: string = 'deepseek-chat'
 
   setApiKey(key: string): void {
     this.apiKey = key

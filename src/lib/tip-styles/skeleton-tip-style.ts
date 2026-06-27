@@ -26,7 +26,7 @@ export class SkeletonTipStyle implements TranslationTipStyle {
       if (!topNode.parentNode) continue
 
       // 跳过已有骨架的节点
-      if (this.hasSkeletonAfter(topNode)) continue
+      if (this.findSkeletonAfter(topNode)) continue
 
       const skeleton = this.createSkeleton(seg)
       topNode.parentNode.insertBefore(skeleton, topNode.nextSibling)
@@ -34,9 +34,18 @@ export class SkeletonTipStyle implements TranslationTipStyle {
     }
   }
 
-  updateProgress(_translatedSegments: TranslatedSegment[]): void {
-    console.log(`[SkeletonTipStyle] updateProgress: ${_translatedSegments.length} segments`)
-    // 骨架屏无需进度更新（全部完成后一次性替换）
+  updateProgress(translatedSegments: TranslatedSegment[]): void {
+    console.log(`[SkeletonTipStyle] updateProgress: ${translatedSegments.length} segments`)
+    // 每批翻译完成后，移除已完成段对应的骨架屏
+    for (const seg of translatedSegments) {
+      const skeleton = this.findSkeletonAfter(seg.topNode)
+      if (skeleton) {
+        skeleton.remove()
+        // 从 currentSkeletons 中移除（避免 showTranslatedTipStyle 重复删除）
+        const idx = this.currentSkeletons.indexOf(skeleton)
+        if (idx !== -1) this.currentSkeletons.splice(idx, 1)
+      }
+    }
   }
 
   showTranslatedTipStyle(_success: boolean): void {
@@ -92,11 +101,16 @@ export class SkeletonTipStyle implements TranslationTipStyle {
     return el
   }
 
-  private hasSkeletonAfter(node: Node): boolean {
+  private findSkeletonAfter(node: Node): HTMLElement | null {
     const next = node.nextSibling
-    return next instanceof HTMLElement
+    if (
+      next instanceof HTMLElement
       && next.tagName === SKELETON_TAG.toUpperCase()
       && next.hasAttribute(SKELETON_ATTR)
+    ) {
+      return next
+    }
+    return null
   }
 
   private removeCurrentSkeletons(): void {

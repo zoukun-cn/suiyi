@@ -8,7 +8,9 @@ const SITE_CONFIGS = [
     priority: 10,
     skipSelectors: [
       // GitHub 首页的 "跳转到内容" 链接，翻译后会导致页面结构变化，影响后续文本定位
-      'a[data-skip-target-assigned="false"].js-skip-to-content'
+      'a[data-skip-target-assigned="false"].js-skip-to-content',
+      // GitHub Primer 视觉隐藏元素（仅屏幕阅读器可见），翻译无意义
+      '[class*="VisuallyHidden"]',
     ],
   },
 ]

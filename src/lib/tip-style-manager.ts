@@ -63,6 +63,7 @@ export class TipStyleManager {
 
   /** 进度更新：每批翻译完成后调用 */
   updateProgress(translatedSegments: TranslatedSegment[]): void {
+    console.log(`[TipStyleManager] UpdateProgress finish count: ${translatedSegments.length}`)
     for (const style of this.styles) {
       try {
         style.updateProgress(translatedSegments)
