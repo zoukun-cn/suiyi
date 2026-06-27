@@ -58,7 +58,10 @@ export class SiteConfigManager {
     const shouldSkip = (node: Node | Text): boolean => {
       const el = node.nodeType === Node.TEXT_NODE ? (node as Text).parentElement : node as Element
       if (!el) return false
-      return selectors.some(sel => el.closest(sel) !== null)
+      return selectors.some(sel => {
+        try { return el.closest(sel) !== null }
+        catch { return false }
+      })
     }
     return segments
       .map(s => this.handleSegment(s, shouldSkip))

@@ -52,6 +52,8 @@ export interface UserSettings {
     skeleton: boolean // 骨架屏占位，默认 true
     progressBar: boolean // 底部进度条，默认 true
   }
+  /** 用户自定义的站点跳过规则（最多 MAX_USER_SITE_CONFIGS 条） */
+  siteConfigs: import('../lib/site-config-util').SiteConfig[]
 }
 
 /** 翻译历史条目 */
@@ -92,6 +94,9 @@ export interface MessageResponse<T = unknown> {
   data?: T
   error?: string
 }
+
+/** 用户最多可自定义的站点规则数量 */
+export const MAX_USER_SITE_CONFIGS = 10
 
 // ==================== 常量 ====================
 

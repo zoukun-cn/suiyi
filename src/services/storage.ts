@@ -22,6 +22,16 @@ const DEFAULT_SETTINGS: UserSettings = {
     skeleton: true,
     progressBar: true,
   },
+  siteConfigs: [
+    {
+      urlPattern: 'https://github.com/',
+      priority: 10,
+      skipSelectors: [
+        'a[data-skip-target-assigned="false"].js-skip-to-content',
+        '[class*="VisuallyHidden"]',
+      ],
+    },
+  ],
 }
 
 export async function getSettings(): Promise<UserSettings> {

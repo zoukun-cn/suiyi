@@ -5,7 +5,7 @@ import { TranslatedSegment, type ParagraphTextSegment, type Segment } from '../l
 import { textParser } from '../lib/text-parser-service'
 import { partition } from '../lib/batch-utils'
 import { $ } from '../lib/dom-utils'
-import { siteConfigManager } from '../lib/site-configs'
+import { SiteConfigManager } from '../lib/site-config-util'
 import { observeMutations } from '../services/dom-injector'
 import { TipStyleManager } from '../lib/tip-style-manager'
 
@@ -107,6 +107,7 @@ class PageTranslator {
   private active = false
   private mutationObserver: MutationObserver | null = null
   private tipStyleManager = new TipStyleManager()
+  private siteConfigs: import('../lib/site-config-util').SiteConfig[] = []
 
   get isTranslating(): boolean {
     return this.active
@@ -114,11 +115,12 @@ class PageTranslator {
 
   // ========== 启动 ==========
 
-  async start(payload: { from: string; to: string; engine?: string }): Promise<number> {
-    const { from, to, engine } = payload
+  async start(payload: { from: string; to: string; engine?: string; siteConfigs?: import('../lib/site-config-util').SiteConfig[] }): Promise<number> {
+    const { from, to, engine, siteConfigs } = payload
     console.log(`[Suiyi CS] Translating page: ${from} → ${to} via ${engine || 'default'}`)
     this.active = true
     this.params = { from, to, engine }
+    this.siteConfigs = siteConfigs ?? []
 
     try {
       // 0. 根据设置注册启用的提示样式
@@ -126,7 +128,7 @@ class PageTranslator {
 
       // 1. 解析全页段落
       let segments = textParser.parse(document.body, 'paragraph')
-      segments = siteConfigManager.handle(segments, location.href)
+      segments = new SiteConfigManager(this.siteConfigs).handle(segments, location.href)
 
       // 2. 启动提示样式
       this.tipStyleManager.showTranslatingTipStyle(segments)
@@ -202,7 +204,7 @@ class PageTranslator {
 
         // 解析新增子树
         let segs = textParser.parse(el, 'paragraph')
-        segs = siteConfigManager.handle(segs, location.href)
+        segs = new SiteConfigManager(this.siteConfigs).handle(segs, location.href)
 
         for (const seg of segs) {
           const top = seg.topNode

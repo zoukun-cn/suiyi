@@ -4,11 +4,12 @@ import LanguageSelector from './components/LanguageSelector'
 import EngineSelector from './components/EngineSelector'
 import HistoryList from './components/HistoryList'
 import SettingsForm from './components/SettingsForm'
+import SiteConfigEditor from './components/SiteConfigEditor'
 import { useTranslation } from '../hooks/useTranslation'
 import { getSettings, updateSettings, getHistory, addHistory, clearHistory } from '../services/storage'
 import type { LanguageCode, EngineType, UserSettings, HistoryItem } from '../types'
 
-type Tab = 'translate' | 'history' | 'settings'
+type Tab = 'translate' | 'history' | 'settings' | 'site-rules'
 
 const DEFAULT_SETTINGS: UserSettings = {
   defaultFrom: 'auto',
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     skeleton: true,
     progressBar: true,
   },
+  siteConfigs: [],
 }
 
 export default function App() {
@@ -86,6 +88,7 @@ export default function App() {
     { key: 'translate', label: '翻译' },
     { key: 'history', label: '历史' },
     { key: 'settings', label: '设置' },
+    { key: 'site-rules', label: '站点规则' },
   ]
 
   return (
@@ -163,6 +166,16 @@ export default function App() {
           <SettingsForm
             settings={settings}
             onChange={handleSettingsChange}
+          />
+        </section>
+      )}
+
+      {/* 站点规则 Tab */}
+      {activeTab === 'site-rules' && (
+        <section className="suiyi-main">
+          <SiteConfigEditor
+            value={settings?.siteConfigs ?? []}
+            onChange={(siteConfigs) => handleSettingsChange({ siteConfigs })}
           />
         </section>
       )}

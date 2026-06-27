@@ -94,6 +94,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         from: settings.defaultFrom,
         to: settings.defaultTo,
         engine: settings.defaultEngine,
+        siteConfigs: settings.siteConfigs,
       }
       console.log(`[Suiyi BG] Sending EXECUTE_PAGE_TRANSLATE to tab ${tab.id}:`, payload)
 
@@ -290,9 +291,13 @@ async function handlePageTranslate(payload: TranslatePayload) {
   // 页面翻译：将请求广播到当前活跃 Tab 的 content script
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
   if (tabs[0]?.id) {
+    const settings = await getSettings()
     await chrome.tabs.sendMessage(tabs[0].id, {
       type: 'EXECUTE_PAGE_TRANSLATE',
-      payload,
+      payload: {
+        ...payload,
+        siteConfigs: settings.siteConfigs,
+      },
     })
   }
   return { status: 'sent' }

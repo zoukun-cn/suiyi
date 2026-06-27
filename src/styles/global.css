@@ -251,3 +251,69 @@ body {
   flex-direction: column;
   gap: 28px;
 }
+
+/* ==================== 站点规则编辑器 ==================== */
+.suiyi-site-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suiyi-site-config-card {
+  padding: 10px 12px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: var(--suiyi-radius);
+  background: var(--suiyi-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.suiyi-site-config-card .suiyi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.suiyi-site-config-card label {
+  font-size: 12px;
+  color: var(--suiyi-text-secondary);
+}
+
+.suiyi-site-config-card input {
+  padding: 5px 8px;
+  border: 1px solid var(--suiyi-border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--suiyi-font);
+  outline: none;
+  background: var(--suiyi-bg);
+}
+
+.suiyi-site-config-card input:focus {
+  border-color: var(--suiyi-accent);
+}
+
+.suiyi-site-config-delete {
+  background: none;
+  border: none;
+  color: var(--suiyi-text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.suiyi-site-config-delete:hover {
+  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.08);
+}
+
+.suiyi-site-config-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
