@@ -18,6 +18,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   translateMode: 'bilingual',
   enableHover: true,
   enableSelection: true,
+  translationTipStyles: {
+    skeleton: true,
+    progressBar: true,
+  },
 }
 
 export async function getSettings(): Promise<UserSettings> {

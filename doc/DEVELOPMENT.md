@@ -60,7 +60,12 @@ src/
 │   ├── batch-utils.ts         # 数组分片
 │   ├── retry-utils.ts         # 带退避的重试工具
 │   ├── site-config-util.ts    # 站点级元素跳过规则
-│   └── site-configs.ts        # 已注册的站点配置
+│   ├── site-configs.ts        # 已注册的站点配置
+│   ├── translation-tip-style.ts  # TranslationTipStyle 接口定义
+│   ├── tip-style-manager.ts   # 提示样式管理器
+│   └── tip-styles/
+│       ├── skeleton-tip-style.ts    # 骨架屏占位动画
+│       └── progress-bar-tip-style.ts # 底部进度条
 ├── sidepanel/           # 侧边栏 UI (React)
 │   ├── index.tsx              # 入口
 │   ├── App.tsx                # Tab 导航（翻译/历史/设置）
@@ -69,7 +74,8 @@ src/
 │       ├── HistoryList.tsx
 │       ├── LanguageSelector.tsx
 │       ├── EngineSelector.tsx
-│       └── SettingsForm.tsx
+│       ├── SettingsForm.tsx
+│       └── TranslationTipStyleSettings.tsx
 ├── options/             # 选项页 (React)
 │   ├── index.tsx
 │   └── App.tsx               # 复用 sidepanel 组件

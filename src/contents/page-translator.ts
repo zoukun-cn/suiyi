@@ -7,6 +7,7 @@ import { partition } from '../lib/batch-utils'
 import { $ } from '../lib/dom-utils'
 import { siteConfigManager } from '../lib/site-configs'
 import { observeMutations } from '../services/dom-injector'
+import { TipStyleManager } from '../lib/tip-style-manager'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -20,47 +21,46 @@ const PARENT_TRANSLATED_ATTR = 'data-suiyi-has-translation'
 
 // ==================== 翻译管道（纯函数） ====================
 
-/** 批量翻译 segments，失败时逐条回退 */
+/** 批量翻译 segments，支持进度回调（每批完成后传出已翻译的 TranslatedSegment[]） */
 async function translateSegments(
   segments: Segment[],
   from: string,
   to: string,
   engine?: string,
+  onBatchComplete?: (translated: TranslatedSegment[]) => void,
 ): Promise<TranslatedSegment[]> {
-  const translationMap = new Map<string, string>()
-  const texts = segments.map((s) => s.text)
-  for (const batch of partition(texts, 1000)) {
+  const translatedResult: TranslatedSegment[] = [];
+
+  for (const batch of partition(segments, 1000)) {
+    const texts = batch.map((s) => s.text)
     try {
-      const response = await sendMessage('BATCH_TRANSLATE_TEXT', { texts: batch, from, to, engine })
+      const response = await sendMessage('BATCH_TRANSLATE_TEXT', { texts, from, to, engine })
       if (response?.success && response.data) {
         const results = response.data as Record<string, string>
-        for (const [original, translated] of Object.entries(results)) {
-          if (translated) translationMap.set(original, translated)
-        }
+        const batchResults = parseBatchTranslatedResult(batch, results)
+        batchResults.forEach((e) => { translatedResult.push(e) })
+        onBatchComplete?.(batchResults)
       }
     } catch (err) {
       console.warn('[Suiyi CS] Batch translate failed, trying individual fallback...', err)
-      for (const text of batch) {
-        try {
-          const r = await sendMessage('TRANSLATE_TEXT', { text, from, to, engine })
-          if (r?.success && r.data) {
-            translationMap.set(text, (r.data as { translated: string }).translated)
-          }
-        } catch { /* skip */ }
-      }
     }
   }
 
-  return segments
+  function parseBatchTranslatedResult(orginSegment: Segment[], res: Record<string, string>): TranslatedSegment[]{
+      const translationMap = new Map<string, string>()
+      for (const [original, translated] of Object.entries(res)) {
+          if (translated) translationMap.set(original, translated)
+      }
+    return orginSegment
     .filter((s) => translationMap.has(s.text))
     .map((s) => new TranslatedSegment(s, translationMap.get(s.text)!))
+  }
+
+  return translatedResult;
 }
 
 /** 将译文注入 DOM，插入到原文节点之后 */
-function injectBilingual(
-  translatedSegments: TranslatedSegment[],
-  translatedBlocks?: WeakSet<Element>,
-): number {
+function injectBilingual(translatedSegments: TranslatedSegment[], translatedBlocks?: WeakSet<Element>): number {
   let count = 0
   for (const seg of translatedSegments) {
     if (!seg.topNode.parentNode) continue
@@ -106,6 +106,7 @@ class PageTranslator {
   private params: { from: string; to: string; engine?: string } | null = null
   private active = false
   private mutationObserver: MutationObserver | null = null
+  private tipStyleManager = new TipStyleManager()
 
   get isTranslating(): boolean {
     return this.active
@@ -120,19 +121,34 @@ class PageTranslator {
     this.params = { from, to, engine }
 
     try {
+      // 0. 根据设置注册启用的提示样式
+      await this.tipStyleManager.initByUserSettings()
+
       // 1. 解析全页段落
       let segments = textParser.parse(document.body, 'paragraph')
       segments = siteConfigManager.handle(segments, location.href)
 
-      // 2. 全量翻译并注入
-      const translated = await translateSegments(segments, from, to, engine)
-      let count = injectBilingual(translated, this.translatedBlocks)
+      // 2. 启动提示样式
+      this.tipStyleManager.showTranslatingTipStyle(segments)
+
+      // 3. 分批翻译并注入，带进度回调
+      const translated = await translateSegments(segments, from, to, engine, (batchTranslated) => {
+        this.tipStyleManager.updateProgress(batchTranslated)
+      })
+
+      // 4. 翻译完成，移除提示样式
+      this.tipStyleManager.showTranslatedTipStyle(true)
+
+      // 5. 注入译文
+      const count = injectBilingual(translated, this.translatedBlocks)
       console.log(`[Suiyi CS] ${count} blocks translated`)
 
-      // 3. 监听动态内容（滚动加载、SPA 切换）
+      // 6. 监听动态内容（滚动加载、SPA 切换）
       this.setupMutationObserver()
       return count
     } catch (err) {
+      // 翻译失败，清理提示元素（不显示 ✓）
+      this.tipStyleManager.showTranslatedTipStyle(false)
       this.stop()
       throw err
     }
@@ -145,6 +161,9 @@ class PageTranslator {
 
     this.mutationObserver?.disconnect()
     this.mutationObserver = null
+
+    // 清理提示样式
+    this.tipStyleManager.showTranslatedTipStyle(false)
 
     const els = $(`suiyi-translated[${TRANSLATED_ATTR}]`)
     const count = els.length
@@ -171,8 +190,15 @@ class PageTranslator {
         if (node.nodeType !== Node.ELEMENT_NODE) continue
         const el = node as Element
 
-        // 过滤自注入的译文元素
-        if (el.tagName === 'SUIYI-TRANSLATED' || el.hasAttribute(TRANSLATED_ATTR)) continue
+        // 过滤自注入的译文元素和提示元素
+        if (
+          el.tagName === 'SUIYI-TRANSLATED'
+          || el.hasAttribute(TRANSLATED_ATTR)
+          || el.tagName === 'SUIYI-SKELETON'
+          || el.hasAttribute('data-suiyi-skeleton')
+          || el.tagName === 'SUIYI-PROGRESS-BAR'
+          || el.hasAttribute('data-suiyi-progress-bar')
+        ) continue
 
         // 解析新增子树
         let segs = textParser.parse(el, 'paragraph')
@@ -196,10 +222,15 @@ class PageTranslator {
 
       if (newSegments.length === 0) return
 
+      // 启动提示样式（动态内容：追加骨架屏、累加进度条总数）
+      this.tipStyleManager.showTranslatingTipStyle(newSegments)
+
       this.inProgressBlocks.add(newSegments[0].topNode as Element)
       translateSegments(newSegments, from, to, engine)
         .then((translated) => {
           if (!this.active) return
+          // 移除新内容的提示样式
+          this.tipStyleManager.showTranslatedTipStyle(true)
           injectBilingual(translated, this.translatedBlocks)
           for (const seg of newSegments) {
             if (seg.topNode instanceof Element) {
@@ -208,6 +239,8 @@ class PageTranslator {
           }
         })
         .catch(() => {
+          // 失败时清理提示元素
+          this.tipStyleManager.showTranslatedTipStyle(false)
           for (const seg of newSegments) {
             if (seg.topNode instanceof Element) {
               this.inProgressBlocks.delete(seg.topNode)
@@ -216,6 +249,7 @@ class PageTranslator {
         })
     })
   }
+
 }
 
 // ==================== 单例 & 消息监听 ====================

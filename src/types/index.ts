@@ -47,6 +47,11 @@ export interface UserSettings {
   translateMode: TranslateMode
   enableHover: boolean
   enableSelection: boolean
+  /** 翻译中提示样式开关（多选独立开关） */
+  translationTipStyles: {
+    skeleton: boolean // 骨架屏占位，默认 true
+    progressBar: boolean // 底部进度条，默认 true
+  }
 }
 
 /** 翻译历史条目 */

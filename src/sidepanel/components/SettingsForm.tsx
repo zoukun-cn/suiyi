@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { UserSettings, TranslateMode, EngineType } from '../../types'
 import { getApiKey, setApiKey, removeApiKey } from '../../services/storage'
+import TranslationTipStyleSettings from './TranslationTipStyleSettings'
 
 interface SettingsFormProps {
   settings: UserSettings
@@ -80,6 +81,11 @@ export default function SettingsForm({ settings, onChange }: SettingsFormProps) 
         />
         <span style={{ fontSize: 14 }}>启用划词翻译</span>
       </label>
+
+      <TranslationTipStyleSettings
+        value={settings.translationTipStyles}
+        onChange={(translationTipStyles) => onChange({ translationTipStyles })}
+      />
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--suiyi-border)', margin: 0 }} />
 
