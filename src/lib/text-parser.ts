@@ -122,15 +122,12 @@ abstract class AbstractTranslatableTextParser<T extends Segment> implements Tran
     for (const [prop, val] of this.skipStyles) {
       if (computedStyle.getPropertyValue(prop) === val) return true
     }
-    return  e instanceof HTMLElement? this.isElementVisible(e, computedStyle) === false : false
+    return  e instanceof HTMLElement ? this.isElementVisible(e) === false : false
   }
 
-  /** 仅检查 CSS/DOM 级别的不可见（opacity、零尺寸），不管视口位置 */
-  protected isElementVisible(element: HTMLElement, computedStyle: CSSStyleDeclaration | null): boolean {
-    const style = computedStyle ?? getComputedStyle(element);
-    if (parseFloat(style.opacity) === 0) return false;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+  /** 检查元素是否对用户可见（利用浏览器原生 API，覆盖 CSS 隐藏手段） */
+  protected isElementVisible(element: HTMLElement): boolean {
+    return element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
   }
 
   protected shouldSkipElement(e: Element): boolean {
