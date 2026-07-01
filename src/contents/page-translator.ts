@@ -6,9 +6,9 @@ import { textParser } from '../lib/text-parser-service'
 import { partition } from '../lib/batch-utils'
 import { $ } from '../lib/dom-utils'
 import { SiteConfigManager } from '../lib/site-config-util'
-import { observeMutations } from '../services/dom-injector'
 import { TipStyleManager } from '../lib/tip-style-manager'
 import { ViewportSegmentFilter } from '../lib/viewport-filter'
+import { observeMutations } from '../services/dom-injector'
 
 export const config: PlasmoCSConfig = {
   matches: ['<all_urls>'],
@@ -109,6 +109,7 @@ class PageTranslator {
   private active = false
   private tipStyleManager = new TipStyleManager()
   private siteConfigs: import('../lib/site-config-util').SiteConfig[] = []
+  private mutationObserver:MutationObserver|null = null;
   private filter: ViewportSegmentFilter =  new ViewportSegmentFilter({
     listener: {
       batchSize: 30,
@@ -139,7 +140,7 @@ class PageTranslator {
     this.siteConfigs = siteConfigs ?? []
     return this
   }
-
+  
   async parseText() : Promise<Segment[]> {
       let segments = textParser.parse(document.body, 'paragraph')
       segments = new SiteConfigManager(this.siteConfigs).handle(segments, location.href)
@@ -153,11 +154,49 @@ class PageTranslator {
   }
 
   // 添加到翻译队列
-  async addTranslateQueue(segment:Segment[]) {
+  async addTranslateQueue(segment:Segment[]):Promise<PageTranslator> {
     this.filter.add(segment);
+    return this;
   }
 
-  // ========== 启动 ==========
+  /** 启 动 MutationObserver，监听 DOM 动态新增内容并自动翻译 */
+  enableObserveMutations(listener: (segments: Segment[]) => void): PageTranslator {
+    // 复用 init 时缓存的站点配置，动态内容也需要过滤
+    const siteMgr = new SiteConfigManager(this.siteConfigs)
+
+    this.mutationObserver = observeMutations((nodes) => {
+      // 1. 只处理 Element 节点（MutationObserver 回调可能包含 Text、Comment 等）
+      // 2. 跳过已翻译子树（检查 data-suiyi-has-translation 标记 + 内部译文元素）
+      // 3. 对每个新 Element 执行段落解析，展平为 Segment[]
+      const segments = nodes
+        .filter((n): n is Element => n.nodeType === Node.ELEMENT_NODE)
+        .filter((el) => !this.isSubtreeTranslated(el))
+        .flatMap((el) => textParser.parse(el, 'paragraph'))
+        .filter((seg) => seg && !seg.isEmpty())
+
+      if (segments.length === 0) return
+
+      // 应用站点跳过规则（与 parseText 保持一致）
+      const filtered = siteMgr.handle(segments, location.href)
+      if (filtered.length > 0) {
+        console.log(`[Suiyi CS] Dynamic content: ${filtered.length} new segments`)
+        listener(filtered)
+      }
+    })
+    return this
+  }
+
+  /** 检查元素所在子树是否已被翻译（向上查标记属性 + 向下查注入元素） */
+  private isSubtreeTranslated(el: Element): boolean {
+    // 向上查：祖先节点是否已标记为已翻译
+    let current: Element | null = el
+    while (current && current !== document.documentElement) {
+      if (current.hasAttribute(PARENT_TRANSLATED_ATTR)) return true
+      current = current.parentElement
+    }
+    // 向下查：子树内是否已注入译文元素（处理父容器整体移动的场景）
+    return el.querySelector(`suiyi-translated[${TRANSLATED_ATTR}]`) !== null
+  }
 
   async start() {
     console.log(`[Suiyi CS] Translating page: ${this.params.from} → ${this.params.to}`)
@@ -193,6 +232,7 @@ class PageTranslator {
     this.inProgressBlocks.clear()
     this.params = { from: '', to: '' }
 
+    this.mutationObserver?.disconnect();
     console.log(`[Suiyi CS] Restored ${count} translations`)
     return count
   }
@@ -213,7 +253,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       .init(message.payload)
       .then(t => t.parseText())
       .then(t => translator.addTranslateQueue(t))
-      .then((t) => translator.start())
+      // 开启动态内容监听：MutationObserver 检测 DOM 变化 → 解析新段落 → 送入视口翻译队列
+      .then(t => t.enableObserveMutations(s => t.addTranslateQueue(s)))
+      .then(t => t.start())
       .then((count) => {
         sendResponse({ success: true, data: { count } })
         notifyStatus('translated')

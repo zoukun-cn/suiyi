@@ -19,9 +19,7 @@ export function clearTranslations(): number {
  * 监听 DOM 变化，对新内容自动翻译。
  * 多次 mutation 的 addedNodes 聚合后经 300ms debounce 统一回调。
  */
-export function observeMutations(
-  onNewContent: (addedNodes: Node[]) => void
-): MutationObserver {
+export function observeMutations( onNewContent: (addedNodes: Node[]) => void): MutationObserver {
   let pendingNodes: Node[] = []
 
   const flush = debounce(() => {
